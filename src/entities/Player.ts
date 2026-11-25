@@ -86,14 +86,15 @@ export default class Player extends Entity {
             this.getComponent(Movement)?.move(this, this._moveDirection, deltaTime);
         }
 
-        //Face th move direction
-        this.rotation = this._moveDirection.angle();
-
+        // Face the move direction
+        if (this._moveDirection.lengthSq() > 0) {
+            this.rotation = this._moveDirection.angle();
+        }
 
         // Stop player from going offscreen
-        const camera = this.scene.camera.main;
-        this.x = Phaser.Math.Clamp(this.x, this.displayWidth / 2, this.scene.camera.main.width - this.displayWidth / 2);
-        this.x = Phaser.Math.Clamp(this.x, this.displayHeight / 2, this.scene.camera.main.height - this.displayHeight / 2);
+        const camera = this.scene.cameras.main;
+        this.x = Phaser.Math.Clamp(this.x, this.displayWidth / 2, camera.width - this.displayWidth / 2);
+        this.y = Phaser.Math.Clamp(this.y, this.displayHeight / 2, camera.height - this.displayHeight / 2);
 
         // Press space to shoot
         if (this._cursorKeys.space.isDown) {
