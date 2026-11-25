@@ -1,6 +1,6 @@
-import {Input, Scene} from "phaser";
-import {PlayerShipData, PlayerShipsData} from "../gameData/PlayerShipsData.ts";
-import type {BulletData} from "../gameData/BulletData.ts";
+import { Input, Scene } from "phaser";
+import { PlayerShipData, PlayerShipsData } from "../gameData/PlayerShipsData.ts";
+import type { BulletData } from "../gameData/BulletData.ts";
 import Entity from './Entity.ts';
 import Health from "../components/Health.ts";
 import Movement from "../components/Movement.ts";
@@ -19,6 +19,7 @@ export default class Player extends Entity {
     private _playerShipData: PlayerShipData;
     private _rateOfFire: number;
     private _lastShotTime: number;
+    private readonly _moveDirection: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
 
     constructor(scene: Scene, x: number, y: number) {
         super(scene, x, y, 'sprites');
@@ -70,21 +71,29 @@ export default class Player extends Entity {
         super.preUpdate(timeSinceLaunch, deltaTime);
 
         // Press left or right arrow keys to move the player smoothly horizontally using deltaTime
-        if (this._cursorKeys.left.isDown) {
-            if (this._cursorKeys.shift.isDown) {
-                this.angle -= this._playerShipData.movementSpeed * deltaTime;
-            } else {
-                this.getComponent(Movement)?.moveHorizontally(this, -deltaTime);
-            }
-        } else if (this._cursorKeys.right.isDown) {
-            if (this._cursorKeys.shift.isDown) {
-                this.angle += this._playerShipData.movementSpeed * deltaTime;
-            } else {
-                this.getComponent(Movement)?.moveHorizontally(this, deltaTime);
-            }
+        this._moveDirection.set(0.0);
+        if (this._cursorKeys.left.isDown)
+            this._moveDirection.x -= 1;
+        if (this._cursorKeys.right.isDown)
+            this._moveDirection.x += 1;
+        if (this._cursorKeys.up.isDown)
+            this._moveDirection.y -= 1;
+        if (this._cursorKeys.down.isDown)
+            this._moveDirection.y += 1;
+
+        if (this._moveDirection.lengthSq() > 0) {
+            this._moveDirection.normalize();
+            this.getComponent(Movement)?.move(this, this._moveDirection, deltaTime);
         }
+
+        //Face th move direction
+        this.rotation = this._moveDirection.angle();
+
+
         // Stop player from going offscreen
-        this.x = Phaser.Math.Clamp(this.x, this.displayWidth / 2, this.scene.cameras.main.width - this.displayWidth / 2);
+        const camera = this.scene.camera.main;
+        this.x = Phaser.Math.Clamp(this.x, this.displayWidth / 2, this.scene.camera.main.width - this.displayWidth / 2);
+        this.x = Phaser.Math.Clamp(this.x, this.displayHeight / 2, this.scene.camera.main.height - this.displayHeight / 2);
 
         // Press space to shoot
         if (this._cursorKeys.space.isDown) {
