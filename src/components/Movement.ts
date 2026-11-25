@@ -12,6 +12,10 @@ export default class Movement implements IComponent {
         }
     }
 
+    public get speed(): number {
+        return this._speed;
+    }
+
     public setSpeed(speed: number) {
         this._speed = speed;
     }

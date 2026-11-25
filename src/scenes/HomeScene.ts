@@ -36,15 +36,18 @@ export default class HomeScene extends Phaser.Scene {
         this.load.bitmapFont('future-bmp', 'Fonts/kenvector_future.png', 'Fonts/kenvector_future.xml');
         this.load.font('future', 'Fonts/kenvector_future.ttf');
         this.load.json('playerShips', 'Data/playerShips.json');
+        this.load.json('enemies', 'Data/enemies.json');
         this.load.audio('sfx_laser1', 'Sounds/sfx_laser1.ogg');
         this.load.audio('sfx_laser2', 'Sounds/sfx_laser2.ogg');
     }
 
     create() {
-        this.add.text(this.scale.width / 2, this.scale.width / 2, 'CODA SHMUP',
-            {fontSize: '72px', color: '#fff', fontFamily: 'future'}).setOrigin(0.5);
-        this.add.text(this.scale.width / 2, this.scale.width / 2 + 72, 'Press SPACE to start',
-            {fontSize: '32px', color: '#fff'}).setOrigin(0.5);
+        this.add.text(this.scale.width / 2, this.scale.width / 2, 'CODA HERO SHOOTER',
+            {fontSize: '64px', color: '#fff', fontFamily: 'future'}).setOrigin(0.5);
+        this.add.text(this.scale.width / 2, this.scale.width / 2 + 80, 'Move: Arrows / ZQSD / WASD  |  Auto-Shoot',
+            {fontSize: '28px', color: '#cbd5e1'}).setOrigin(0.5);
+        this.add.text(this.scale.width / 2, this.scale.width / 2 + 140, 'Press SPACE to start',
+            {fontSize: '36px', color: '#fff'}).setOrigin(0.5);
 
         // Ignore the OS key repeat: SPACE may still be held from the previous game
         this.input.keyboard?.on('keydown-SPACE', (event: KeyboardEvent) => {

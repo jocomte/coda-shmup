@@ -51,10 +51,10 @@ export default class Bullet extends Phaser.GameObjects.Rectangle {
     update(timeSinceLaunch: number, deltaTime: number) {
         super.update(timeSinceLaunch, deltaTime);
 
-        // Bullets can now fly in any direction: recycle them when they leave the screen on any side
-        const camera = this.scene.cameras.main;
-        if (this.x < -this.displayWidth || this.x > camera.width + this.displayWidth
-            || this.y < -this.displayHeight || this.y > camera.height + this.displayHeight) {
+        // Bullets can fly in any direction: recycle them when they leave the map bounds
+        const bounds = this.scene.physics.world.bounds;
+        if (this.x < bounds.left - this.displayWidth || this.x > bounds.right + this.displayWidth
+            || this.y < bounds.top - this.displayHeight || this.y > bounds.bottom + this.displayHeight) {
             this.disable();
         }
     }
