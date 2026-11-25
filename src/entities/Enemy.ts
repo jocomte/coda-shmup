@@ -18,7 +18,7 @@ export default class Enemy extends Entity {
         height: 12,
         color: 0xf25f5c,
         speed: 460,
-        damage: 1,
+        damage: 15,
     };
 
     private _enemyData?: EnemyTypeData;
@@ -27,14 +27,23 @@ export default class Enemy extends Entity {
     private _shootTimer: Phaser.Time.TimerEvent;
     private _isHitFlashing: boolean = false;
     private _elapsedTime: number = 0;
+    private _contactDamage: number = 15;
     private readonly _moveDir: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
 
     public get scoreValue(): number {
         return this._enemyData?.scoreValue ?? 1;
     }
 
+    public get expValue(): number {
+        return this._enemyData?.expValue ?? 1;
+    }
+
+    public get contactDamage(): number {
+        return this._contactDamage;
+    }
+
     public get dropChance(): number {
-        return this._enemyData?.dropChance ?? 0.25;
+        return this._enemyData?.dropChance ?? 0.2;
     }
 
     public init(bulletsGroup: Phaser.Physics.Arcade.Group, target: Entity) {
@@ -87,7 +96,7 @@ export default class Enemy extends Entity {
         }
     }
 
-    public enable(x: number, y: number, data?: EnemyTypeData) {
+    public enable(x: number, y: number, data?: EnemyTypeData, playerLevel: number = 1) {
         this._enemyData = data;
         this._isHitFlashing = false;
         this._elapsedTime = 0;
@@ -112,24 +121,35 @@ export default class Enemy extends Entity {
             (this.height - bodyRadius * 2) / 2
         );
 
-        const health = this.getComponent(Health);
-        health?.setMax(data?.health ?? 1, true);
+        // Adaptive difficulty scaling based on player level
+        const levelOffset = Math.max(0, playerLevel - 1);
+        const hpScale = 1 + levelOffset * 0.45;
+        const speedScale = 1 + Math.min(0.65, levelOffset * 0.08);
+        const damageBonus = Math.min(20, levelOffset * 3);
+        const fireCooldownScale = Math.max(0.65, Math.pow(0.94, levelOffset));
 
-        this.getComponent(Movement)?.setSpeed(data?.movementSpeed ?? 0.18);
+        const baseHealth = data?.health ?? 1;
+        const scaledHealth = Math.max(1, Math.round(baseHealth * hpScale));
+        this.getComponent(Health)?.setMax(scaledHealth, true);
+
+        this.getComponent(Movement)?.setSpeed((data?.movementSpeed ?? 0.18) * speedScale);
+
+        this._contactDamage = (data?.contactDamage ?? 15) + damageBonus;
 
         const bulletColor = parseColor(data?.bullet.color) ?? 0xf25f5c;
         this.getComponent(Weapon)?.setBulletData({
             width: data?.bullet.width ?? 12,
             height: data?.bullet.height ?? 12,
             color: bulletColor,
-            speed: data?.bullet.speed ?? 460,
-            damage: data?.bullet.damage ?? 1,
+            speed: (data?.bullet.speed ?? 460) * (1 + Math.min(0.4, levelOffset * 0.05)),
+            damage: (data?.bullet.damage ?? 15) + damageBonus,
         });
 
-        this._shootTimerConfig.delay = Phaser.Math.Between(
+        const baseDelay = Phaser.Math.Between(
             data?.shootDelayMin ?? 2000,
             data?.shootDelayMax ?? 3000
         );
+        this._shootTimerConfig.delay = Math.max(900, Math.round(baseDelay * fireCooldownScale));
         this._shootTimer.reset(this._shootTimerConfig);
         this._shootTimer.paused = false;
     }
@@ -159,7 +179,7 @@ export default class Enemy extends Entity {
         const spreadAngle = this._enemyData?.spreadAngle ?? 0;
 
         this.getComponent(Weapon)?.shoot(this, bulletCount, spreadAngle);
-        this.scene.sound.play('sfx_laser2', { volume: 0.35 });
+        this.scene.sound.play('sfx_laser2', { volume: 0.3 });
     }
 
     private shoot() {

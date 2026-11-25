@@ -2,6 +2,7 @@ import { GameObjects, Plugins, Physics, Scene } from "phaser";
 import Health from "../components/Health.ts";
 import Bullet from "../entities/Bullet.ts";
 import Enemy from "../entities/Enemy.ts";
+import ExpGem from "../entities/ExpGem.ts";
 import Player from "../entities/Player.ts";
 import PowerUp from "../entities/PowerUp.ts";
 import type { EnemiesData, EnemyTypeData } from "../gameData/EnemiesData.ts";
@@ -29,6 +30,7 @@ export default class EntityManager extends Plugins.ScenePlugin {
     private _enemies: Physics.Arcade.Group;
     private _enemyBullets: Physics.Arcade.Group;
     private _powerUps: Physics.Arcade.Group;
+    private _expGems: Physics.Arcade.Group;
     private _enemiesData: EnemiesData;
     private _spawnTimer?: Phaser.Time.TimerEvent;
 
@@ -46,7 +48,7 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
     public initAndSpawnPlayer(): Player {
         this._playerBullets = this.scene!.physics.add.group(this.bulletGroupConfig);
-        GroupUtils.populate(96, this._playerBullets);
+        GroupUtils.populate(128, this._playerBullets);
 
         // Enemies group must exist before player so auto-aim can track active enemies
         this._enemyBullets = this.scene!.physics.add.group(this.bulletGroupConfig);
@@ -60,7 +62,7 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
         this._enemies = this.scene!.physics.add.group({
             classType: Enemy,
-            maxSize: 40,
+            maxSize: 48,
             defaultKey: 'sprites',
             defaultFrame: 'ufoRed',
             createCallback: (enemyObj) => {
@@ -84,6 +86,16 @@ export default class EntityManager extends Plugins.ScenePlugin {
             }
         });
 
+        this._expGems = this.scene!.physics.add.group({
+            classType: ExpGem,
+            maxSize: 120,
+            defaultKey: 'sprites',
+            defaultFrame: 'expGem_small',
+            createCallback: (gemObj) => {
+                (gemObj as ExpGem).init(this._player);
+            }
+        });
+
         console.log("[EntityManager] Player spawned");
 
         this.game!.events.emit(GameConstants.Events.PLAYER_SPAWNED_EVENT, this._player);
@@ -104,14 +116,14 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
         // Periodically spawn a random power-up on the map
         this.scene!.time.addEvent({
-            delay: 14000,
+            delay: 15000,
             callback: this.spawnRandomMapPowerUp,
             callbackScope: this,
             loop: true
         });
 
         // Spawn a small initial wave right away so action starts immediately
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
             this.spawnEnemy();
         }
 
@@ -136,7 +148,7 @@ export default class EntityManager extends Plugins.ScenePlugin {
             if (!bullet.active || !player.active) return;
 
             bullet.disable();
-            player.getComponent(Health)?.damage(bullet.damage);
+            player.takeHitDamage(bullet.damage);
 
             this.scene?.cameras.main.shake(100, 0.01);
         });
@@ -146,13 +158,13 @@ export default class EntityManager extends Plugins.ScenePlugin {
             const enemy = enemyObj as Enemy;
             if (!player.active || !enemy.active) return;
 
+            const contactDamage = enemy.contactDamage;
             const enemyHealth = enemy.getComponent(Health);
             enemyHealth?.damage(enemyHealth.max);
 
-            const playerHealth = player.getComponent(Health);
-            playerHealth?.damage(1);
+            player.takeHitDamage(contactDamage);
 
-            this.scene?.cameras.main.shake(120, 0.03);
+            this.scene?.cameras.main.shake(120, 0.025);
         });
 
         this.scene!.physics.add.overlap(this._player, this._powerUps, (playerObj, powerUpObj) => {
@@ -164,15 +176,38 @@ export default class EntityManager extends Plugins.ScenePlugin {
             powerUp.disable();
         });
 
+        this.scene!.physics.add.overlap(this._player, this._expGems, (playerObj, gemObj) => {
+            const player = playerObj as Player;
+            const gem = gemObj as ExpGem;
+            if (!player.active || !gem.active) return;
+
+            const value = gem.expValue;
+            gem.disable();
+            player.gainExp(value);
+        });
+
         console.log("[EntityManager] Group collisions initialized");
     }
 
     private onEnemyKilled(enemy: Enemy) {
         this.scene!.registry.inc(RegistryConstants.Keys.PLAYER_SCORE, enemy.scoreValue);
 
+        this.spawnExpGemAt(enemy.x, enemy.y, enemy.expValue);
+
         if (Math.random() <= enemy.dropChance) {
             this.spawnPowerUpAt(enemy.x, enemy.y);
         }
+    }
+
+    private spawnExpGemAt(x: number, y: number, expValue: number) {
+        const gem = this._expGems.get() as ExpGem;
+        if (!gem) return;
+
+        const margin = 64;
+        const clampedX = Phaser.Math.Clamp(x, margin, GameConstants.MAP_WIDTH - margin);
+        const clampedY = Phaser.Math.Clamp(y, margin, GameConstants.MAP_HEIGHT - margin);
+
+        gem.enable(clampedX, clampedY, expValue);
     }
 
     private spawnPowerUpAt(x: number, y: number) {
@@ -201,30 +236,41 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
     private onSpawnTick() {
         const currentScore = Number(this.scene!.registry.get(RegistryConstants.Keys.PLAYER_SCORE) ?? 0);
-        // Gradually speed up spawns as score grows
+        const playerLevel = this._player?.level ?? 1;
+
+        // Gradually speed up spawns as player level & score grow
         if (this._spawnTimer) {
-            const targetDelay = Math.max(600, 1200 - currentScore * 12);
+            const targetDelay = Math.max(420, 1200 - (playerLevel - 1) * 110 - currentScore * 5);
             this._spawnTimer.timeScale = 1200 / targetDelay;
         }
 
         this.spawnEnemy();
     }
 
-    private pickEnemyType(currentScore: number): EnemyTypeData | undefined {
+    private pickEnemyType(currentScore: number, playerLevel: number): EnemyTypeData | undefined {
         if (!this._enemiesData) return undefined;
 
-        const eligible: EnemyTypeData[] = Object.values(this._enemiesData)
-            .filter(entry => currentScore >= entry.minScoreToSpawn);
+        const eligible: EnemyTypeData[] = Object.values(this._enemiesData).filter(
+            entry => currentScore >= entry.minScoreToSpawn || playerLevel >= entry.minLevelToSpawn
+        );
 
         if (eligible.length === 0) return undefined;
 
-        const totalWeight = eligible.reduce((sum, entry) => sum + entry.spawnWeight, 0);
+        // Higher level gradually shifts weight toward stronger enemies
+        const weighted = eligible.map(entry => ({
+            entry,
+            weight: entry.scoreValue > 1
+                ? entry.spawnWeight + Math.max(0, playerLevel - 1) * 6
+                : entry.spawnWeight,
+        }));
+
+        const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0);
         let roll = Math.random() * totalWeight;
 
-        for (const entry of eligible) {
-            roll -= entry.spawnWeight;
+        for (const item of weighted) {
+            roll -= item.weight;
             if (roll <= 0) {
-                return entry;
+                return item.entry;
             }
         }
 
@@ -283,7 +329,8 @@ export default class EntityManager extends Plugins.ScenePlugin {
         if (!this._player || !this._player.active) return;
 
         const currentScore = Number(this.scene!.registry.get(RegistryConstants.Keys.PLAYER_SCORE) ?? 0);
-        const maxActive = Math.min(18, 6 + Math.floor(currentScore / 8));
+        const playerLevel = this._player.level;
+        const maxActive = Math.min(28, 6 + (playerLevel - 1) * 3 + Math.floor(currentScore / 10));
         if (this._enemies.countActive(true) >= maxActive) {
             return;
         }
@@ -293,10 +340,10 @@ export default class EntityManager extends Plugins.ScenePlugin {
             return;
         }
 
-        const enemyData = this.pickEnemyType(currentScore);
+        const enemyData = this.pickEnemyType(currentScore, playerLevel);
         const pos = this.getSpawnPositionAroundPlayer();
 
-        enemy.enable(pos.x, pos.y, enemyData);
+        enemy.enable(pos.x, pos.y, enemyData, playerLevel);
 
         this.game!.events.emit(GameConstants.Events.ENEMY_SPAWNED_EVENT, enemy);
     }

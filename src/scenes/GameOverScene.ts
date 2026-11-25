@@ -8,6 +8,7 @@ export default class GameOverScene extends Phaser.Scene {
 
     create() {
         this.scene.stop(GameConstants.SceneKeys.MAIN_UI);
+        this.scene.stop(GameConstants.SceneKeys.LEVEL_UP);
 
         const screenCenterX: number = this.scale.width / 2;
         const titleY: number = this.scale.height / 3;

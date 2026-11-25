@@ -36,6 +36,15 @@ export default class Health extends Phaser.Events.EventEmitter implements ICompo
         }
     }
 
+    public increaseMax(amount: number, healSameAmount: boolean = true): void {
+        if (amount <= 0) return;
+        this._max += amount;
+        if (healSameAmount) {
+            this._current = Phaser.Math.Clamp(this._current + amount, 0, this._max);
+        }
+        this.emit(Health.CHANGE_EVENT, this._current, this._max);
+    }
+
     public damage(amount: number, emitEvents: boolean = true): void {
         if (!this.enabled || amount <= 0) return;
         this.adjust(-amount, emitEvents);

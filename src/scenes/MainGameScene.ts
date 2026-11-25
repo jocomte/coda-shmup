@@ -1,5 +1,6 @@
-import { Scene } from 'phaser';
+import { Scene, Scenes } from 'phaser';
 import Health from "../components/Health.ts";
+import Player from "../entities/Player.ts";
 import RegistryConstants from "../RegistryConstants.ts";
 import SaveManager from "../managers/SaveManager.ts";
 import SaveConstants from "../SaveConstants.ts";
@@ -47,6 +48,14 @@ export default class MainGameScene extends Scene {
             this.time.delayedCall(1000, this.endGame, [], this);
         }, this);
 
+        const onLevelUp = () => {
+            this.openLevelUpModal(player);
+        };
+        this.game.events.on(GameConstants.Events.LEVEL_UP_EVENT, onLevelUp, this);
+        this.events.once(Scenes.Events.SHUTDOWN, () => {
+            this.game.events.off(GameConstants.Events.LEVEL_UP_EVENT, onLevelUp, this);
+        }, this);
+
         this.cameras.main.startFollow(player, true, 0.12, 0.12);
 
         this.entityManager.initEnemies();
@@ -79,6 +88,12 @@ export default class MainGameScene extends Scene {
         // Visible outer map barrier
         graphics.lineStyle(12, 0xf43f5e, 0.85);
         graphics.strokeRect(6, 6, mapWidth - 12, mapHeight - 12);
+    }
+
+    private openLevelUpModal(player: Player) {
+        if (!player.active) return;
+        this.scene.pause(GameConstants.SceneKeys.MAIN_GAME);
+        this.scene.launch(GameConstants.SceneKeys.LEVEL_UP, { player });
     }
 
     private endGame() {

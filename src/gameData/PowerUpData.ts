@@ -16,7 +16,7 @@ export const POWERUP_CONFIGS: Record<PowerUpType, PowerUpVisualConfig> = {
     [PowerUpType.HEAL]: {
         frame: 'playerLife1_blue',
         tint: 0x4ade80,
-        label: '+1 HP',
+        label: '+25 HP',
         durationMs: 0,
     },
     [PowerUpType.MULTI_SHOT]: {

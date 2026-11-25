@@ -3,12 +3,16 @@ export default class GameConstants {
         PLAYER_SPAWNED_EVENT: "playerSpawned",
         ENEMY_SPAWNED_EVENT: "enemySpawned",
         POWERUP_CHANGED_EVENT: "powerupChanged",
+        EXP_CHANGED_EVENT: "expChanged",
+        LEVEL_UP_EVENT: "levelUp",
+        UPGRADE_APPLIED_EVENT: "upgradeApplied",
     } as const);
 
     public static readonly SceneKeys = Object.freeze({
         HOME: "HomeScene",
         MAIN_GAME: "MainGameScene",
         MAIN_UI: "MainUIScene",
+        LEVEL_UP: "LevelUpScene",
         GAME_OVER: "GameOverScene",
     } as const);
 

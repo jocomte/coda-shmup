@@ -13,8 +13,11 @@ export type EnemyTypeData = {
     health: number;
     movementSpeed: number;
     scoreValue: number;
+    expValue: number;
+    contactDamage: number;
     spawnWeight: number;
     minScoreToSpawn: number;
+    minLevelToSpawn: number;
     shootDelayMin: number;
     shootDelayMax: number;
     usesShootAnim: boolean;
