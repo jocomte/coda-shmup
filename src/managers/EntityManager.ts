@@ -108,7 +108,7 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
         // Spawn enemies indefinitely around the player
         this._spawnTimer = this.scene!.time.addEvent({
-            delay: 1200,
+            delay: 1650,
             callback: this.onSpawnTick,
             callbackScope: this,
             loop: true
@@ -116,14 +116,22 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
         // Periodically spawn a random power-up on the map
         this.scene!.time.addEvent({
-            delay: 15000,
+            delay: 14000,
             callback: this.spawnRandomMapPowerUp,
             callbackScope: this,
             loop: true
         });
 
-        // Spawn a small initial wave right away so action starts immediately
-        for (let i = 0; i < 4; i++) {
+        // Emit tactical radar snapshot for the UI
+        this.scene!.time.addEvent({
+            delay: 120,
+            callback: this.emitRadarUpdate,
+            callbackScope: this,
+            loop: true
+        });
+
+        // Gentle initial wave so player can get their bearings
+        for (let i = 0; i < 2; i++) {
             this.spawnEnemy();
         }
 
@@ -238,13 +246,42 @@ export default class EntityManager extends Plugins.ScenePlugin {
         const currentScore = Number(this.scene!.registry.get(RegistryConstants.Keys.PLAYER_SCORE) ?? 0);
         const playerLevel = this._player?.level ?? 1;
 
-        // Gradually speed up spawns as player level & score grow
+        // Smooth, gradual spawn speed-up as player level & score grow
         if (this._spawnTimer) {
-            const targetDelay = Math.max(420, 1200 - (playerLevel - 1) * 110 - currentScore * 5);
-            this._spawnTimer.timeScale = 1200 / targetDelay;
+            const targetDelay = Math.max(550, 1650 - (playerLevel - 1) * 95 - currentScore * 2.5);
+            this._spawnTimer.timeScale = 1650 / targetDelay;
         }
 
         this.spawnEnemy();
+    }
+
+    private emitRadarUpdate() {
+        if (!this._player || !this._player.active) return;
+
+        const mapW = GameConstants.MAP_WIDTH;
+        const mapH = GameConstants.MAP_HEIGHT;
+
+        const enemies: Array<{ nx: number; ny: number }> = [];
+        const enemyChildren = this._enemies?.getChildren() ?? [];
+        for (let i = 0; i < enemyChildren.length; i++) {
+            const e = enemyChildren[i] as Enemy;
+            if (!e.active) continue;
+            enemies.push({ nx: e.x / mapW, ny: e.y / mapH });
+        }
+
+        const powerUps: Array<{ nx: number; ny: number }> = [];
+        const powerUpChildren = this._powerUps?.getChildren() ?? [];
+        for (let i = 0; i < powerUpChildren.length; i++) {
+            const p = powerUpChildren[i] as PowerUp;
+            if (!p.active) continue;
+            powerUps.push({ nx: p.x / mapW, ny: p.y / mapH });
+        }
+
+        this.scene?.game.events.emit(GameConstants.Events.RADAR_UPDATE_EVENT, {
+            player: { nx: this._player.x / mapW, ny: this._player.y / mapH },
+            enemies,
+            powerUps,
+        });
     }
 
     private pickEnemyType(currentScore: number, playerLevel: number): EnemyTypeData | undefined {
@@ -330,7 +367,7 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
         const currentScore = Number(this.scene!.registry.get(RegistryConstants.Keys.PLAYER_SCORE) ?? 0);
         const playerLevel = this._player.level;
-        const maxActive = Math.min(28, 6 + (playerLevel - 1) * 3 + Math.floor(currentScore / 10));
+        const maxActive = Math.min(24, 5 + (playerLevel - 1) * 2 + Math.floor(currentScore / 18));
         if (this._enemies.countActive(true) >= maxActive) {
             return;
         }

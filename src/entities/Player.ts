@@ -1,4 +1,4 @@
-import { GameObjects, Input, Scene } from "phaser";
+import { BlendModes, GameObjects, Input, Scene } from "phaser";
 import { PlayerShipData, PlayerShipsData } from "../gameData/PlayerShipsData.ts";
 import type { BulletData } from "../gameData/BulletData.ts";
 import { POWERUP_CONFIGS, PowerUpType } from "../gameData/PowerUpData.ts";
@@ -38,11 +38,12 @@ export type ExpStatus = {
 
 export default class Player extends Entity {
     private readonly _bulletData: BulletData = {
-        width: 14,
-        height: 5,
-        color: 0xffe066,
-        speed: 1100,
-        damage: 1
+        width: 24,
+        height: 10,
+        color: 0x38bdf8,
+        speed: 1150,
+        damage: 1,
+        frame: 'bullet_player',
     };
 
     private _moveKeys: MoveKeys;
@@ -61,9 +62,10 @@ export default class Player extends Entity {
     // Permanent EXP & Upgrade progression
     private _level: number = 1;
     private _exp: number = 0;
-    private _expToNext: number = 5;
+    private _expToNext: number = 4;
     private _pendingLevelUps: number = 0;
     private _manualShipSelection: boolean = false;
+    private _lastTrailTime: number = 0;
     private readonly _upgradeRanks: Map<UpgradeId, number> = new Map();
 
     private _extraProjectiles: number = 0;
@@ -140,7 +142,7 @@ export default class Player extends Entity {
         this.angle = -90;
         this.selectPlayerShip(1);
 
-        this._baseRateOfFire = 0.36;
+        this._baseRateOfFire = 0.32;
         this._lastShotTime = 0;
 
         this._level = 1;
@@ -177,7 +179,7 @@ export default class Player extends Entity {
         this.arcadeBody.setEnable(false);
         this.setTintFill(0xffffff);
 
-        this.scene.time.delayedCall(350, () => {
+        this.scene.time.delayedCall(500, () => {
             this.clearTint();
             if (this.active) {
                 this.arcadeBody.setEnable(true);
@@ -277,9 +279,11 @@ export default class Player extends Entity {
                 break;
             case UpgradeId.DAMAGE:
                 this._bulletData.damage += 1;
-                this._bulletData.width = Math.min(26, 14 + this.getUpgradeRank(UpgradeId.DAMAGE) * 2);
-                this._bulletData.height = Math.min(11, 5 + this.getUpgradeRank(UpgradeId.DAMAGE));
-                this._bulletData.color = this.getUpgradeRank(UpgradeId.DAMAGE) >= 3 ? 0x38bdf8 : 0xfbbf24;
+                if (this.getUpgradeRank(UpgradeId.DAMAGE) >= 2) {
+                    this._bulletData.frame = 'bullet_player_heavy';
+                    this._bulletData.width = 30;
+                    this._bulletData.height = 14;
+                }
                 break;
             case UpgradeId.SPEED:
                 this._speedUpgradeMultiplier += 0.18;
@@ -343,7 +347,7 @@ export default class Player extends Entity {
     }
 
     private computeExpRequired(level: number): number {
-        return Math.floor(5 + (level - 1) * 4 + Math.pow(level - 1, 1.35) * 2);
+        return Math.floor(4 + (level - 1) * 4 + Math.pow(level - 1, 1.3) * 2);
     }
 
     private createUpgradeAttachmentSprites() {
@@ -539,6 +543,11 @@ export default class Player extends Entity {
         if (this._moveDirection.lengthSq() > 0) {
             this._moveDirection.normalize();
             this.getComponent(Movement)?.move(this, this._moveDirection, deltaTime);
+
+            if (timeSinceLaunch - this._lastTrailTime > 55) {
+                this._lastTrailTime = timeSinceLaunch;
+                this.spawnEngineTrail();
+            }
         }
 
         // Strict map bounds clamping (accounting for sprite dimensions at any angle)
@@ -567,9 +576,52 @@ export default class Player extends Entity {
             const spreadAngle = bulletCount > 1 ? Math.min(90, (bulletCount - 1) * 11) : 0;
 
             this.getComponent(Weapon)?.shoot(this, bulletCount, spreadAngle);
-            this.scene.sound.play('sfx_laser1', { volume: 0.4 });
+            this.spawnMuzzleFlash();
+            this.scene.sound.play('sfx_laser1', { volume: 0.35 });
 
             this._lastShotTime = timeSinceLaunch;
         }
+    }
+
+    private spawnEngineTrail() {
+        const backX = this.x - Math.cos(this.rotation) * 38;
+        const backY = this.y - Math.sin(this.rotation) * 38;
+        const spark = this.scene.add.image(
+            backX + Phaser.Math.Between(-8, 8),
+            backY + Phaser.Math.Between(-8, 8),
+            'sprites',
+            'glowSpark'
+        )
+            .setTint(this._speedBoostRemainingMs > 0 ? 0xc084fc : 0x38bdf8)
+            .setBlendMode(BlendModes.ADD)
+            .setScale(0.75)
+            .setAlpha(0.7)
+            .setDepth(8);
+
+        this.scene.tweens.add({
+            targets: spark,
+            scale: 0.1,
+            alpha: 0,
+            duration: 240,
+            onComplete: () => spark.destroy(),
+        });
+    }
+
+    private spawnMuzzleFlash() {
+        const frontX = this.x + Math.cos(this.rotation) * 44;
+        const frontY = this.y + Math.sin(this.rotation) * 44;
+        const flash = this.scene.add.image(frontX, frontY, 'sprites', 'glowSpark')
+            .setTint(this._bulletData.frame === 'bullet_player_heavy' ? 0xfacc15 : 0x7dd3fc)
+            .setBlendMode(BlendModes.ADD)
+            .setScale(1.2)
+            .setDepth(14);
+
+        this.scene.tweens.add({
+            targets: flash,
+            scale: 0.2,
+            alpha: 0,
+            duration: 90,
+            onComplete: () => flash.destroy(),
+        });
     }
 }

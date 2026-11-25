@@ -409,7 +409,7 @@
 					}
 				},
 				{
-					"filename": "star3",
+					"filename": "bullet_enemy",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
@@ -574,6 +574,111 @@
 						"y": 413,
 						"w": 32,
 						"h": 32
+					}
+				},
+				{
+					"filename": "bullet_enemy_heavy",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 28,
+						"h": 28
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 28,
+						"h": 28
+					},
+					"frame": {
+						"x": 126,
+						"y": 449,
+						"w": 28,
+						"h": 28
+					}
+				},
+				{
+					"filename": "glowSpark",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 24,
+						"h": 24
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 24,
+						"h": 24
+					},
+					"frame": {
+						"x": 126,
+						"y": 481,
+						"w": 24,
+						"h": 24
+					}
+				},
+				{
+					"filename": "star3",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 24,
+						"h": 24
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 24,
+						"h": 24
+					},
+					"frame": {
+						"x": 126,
+						"y": 509,
+						"w": 24,
+						"h": 24
+					}
+				},
+				{
+					"filename": "bullet_player_heavy",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 44,
+						"h": 22
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 44,
+						"h": 22
+					},
+					"frame": {
+						"x": 126,
+						"y": 537,
+						"w": 44,
+						"h": 22
+					}
+				},
+				{
+					"filename": "bullet_player",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 36,
+						"h": 16
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 36,
+						"h": 16
+					},
+					"frame": {
+						"x": 154,
+						"y": 481,
+						"w": 36,
+						"h": 16
 					}
 				}
 			]

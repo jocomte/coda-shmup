@@ -4,11 +4,18 @@ import Player, { type ActivePowerUpStatus, type ExpStatus } from "../entities/Pl
 import GameConstants from "../GameConstants.ts";
 import RegistryConstants from "../RegistryConstants.ts";
 
+type RadarSnapshot = {
+    player: { nx: number; ny: number };
+    enemies: Array<{ nx: number; ny: number }>;
+    powerUps: Array<{ nx: number; ny: number }>;
+};
+
 export default class MainUIScene extends Scene {
     private static readonly EXP_BAR_WIDTH: number = 984;
     private static readonly EXP_BAR_HEIGHT: number = 36;
     private static readonly HP_BAR_WIDTH: number = 460;
     private static readonly HP_BAR_HEIGHT: number = 40;
+    private static readonly RADAR_SIZE: number = 176;
 
     private _expBarFill!: GameObjects.Rectangle;
     private _expBarText!: GameObjects.Text;
@@ -18,6 +25,9 @@ export default class MainUIScene extends Scene {
 
     private _scoreText!: GameObjects.BitmapText;
     private _powerUpsText!: GameObjects.Text;
+    private _radarGraphics!: GameObjects.Graphics;
+    private _radarOriginX: number = 0;
+    private _radarOriginY: number = 0;
 
     constructor() {
         super(GameConstants.SceneKeys.MAIN_UI);
@@ -28,12 +38,14 @@ export default class MainUIScene extends Scene {
         this.game.events.on(GameConstants.Events.PLAYER_SPAWNED_EVENT, this.onPlayerSpawned, this);
         this.game.events.on(GameConstants.Events.EXP_CHANGED_EVENT, this.onExpChanged, this);
         this.game.events.on(GameConstants.Events.POWERUP_CHANGED_EVENT, this.onPowerUpsChanged, this);
+        this.game.events.on(GameConstants.Events.RADAR_UPDATE_EVENT, this.onRadarUpdate, this);
         this.registry.events.on(RegistryConstants.Events.PLAYER_SCORE_CHANGE, this.onPlayerScoreChanged, this);
 
         this.events.once(Scenes.Events.SHUTDOWN, () => {
             this.game.events.off(GameConstants.Events.PLAYER_SPAWNED_EVENT, this.onPlayerSpawned, this);
             this.game.events.off(GameConstants.Events.EXP_CHANGED_EVENT, this.onExpChanged, this);
             this.game.events.off(GameConstants.Events.POWERUP_CHANGED_EVENT, this.onPowerUpsChanged, this);
+            this.game.events.off(GameConstants.Events.RADAR_UPDATE_EVENT, this.onRadarUpdate, this);
             this.registry.events.off(RegistryConstants.Events.PLAYER_SCORE_CHANGE, this.onPlayerScoreChanged, this);
         }, this);
     }
@@ -60,7 +72,7 @@ export default class MainUIScene extends Scene {
         this._expBarText = this.add.text(
             marginX + MainUIScene.EXP_BAR_WIDTH / 2,
             expY + MainUIScene.EXP_BAR_HEIGHT / 2,
-            "LVL 1  •  0 / 5 XP",
+            "LVL 1  •  0 / 4 XP",
             {
                 fontSize: '22px',
                 fontFamily: 'future, sans-serif',
@@ -116,9 +128,55 @@ export default class MainUIScene extends Scene {
             lineSpacing: 6,
         }).setOrigin(0, 0);
 
+        // Tactical Mini-Radar (bottom-right)
+        this._radarOriginX = this.scale.width - MainUIScene.RADAR_SIZE - 36;
+        this._radarOriginY = this.scale.height - MainUIScene.RADAR_SIZE - 36;
+        this.add.rectangle(
+            this._radarOriginX,
+            this._radarOriginY,
+            MainUIScene.RADAR_SIZE,
+            MainUIScene.RADAR_SIZE,
+            0x0f172a,
+            0.78
+        ).setOrigin(0, 0).setStrokeStyle(3, 0x38bdf8, 0.65);
+
+        this._radarGraphics = this.add.graphics();
+
         this.scene.bringToTop();
 
         console.log("MainUIScene created");
+    }
+
+    private onRadarUpdate(snapshot: RadarSnapshot) {
+        if (!this._radarGraphics) return;
+
+        const g = this._radarGraphics;
+        const size = MainUIScene.RADAR_SIZE;
+        const ox = this._radarOriginX;
+        const oy = this._radarOriginY;
+
+        g.clear();
+
+        // Crosshair guidelines
+        g.lineStyle(1, 0x334155, 0.5);
+        g.lineBetween(ox + size / 2, oy + 4, ox + size / 2, oy + size - 4);
+        g.lineBetween(ox + 4, oy + size / 2, ox + size - 4, oy + size / 2);
+
+        // Power-ups (green/yellow dots)
+        g.fillStyle(0x4ade80, 0.95);
+        for (const p of snapshot.powerUps) {
+            g.fillCircle(ox + p.nx * size, oy + p.ny * size, 3.5);
+        }
+
+        // Enemies (red dots)
+        g.fillStyle(0xf43f5e, 0.95);
+        for (const e of snapshot.enemies) {
+            g.fillCircle(ox + e.nx * size, oy + e.ny * size, 3);
+        }
+
+        // Player (bright cyan dot)
+        g.fillStyle(0x38bdf8, 1);
+        g.fillCircle(ox + snapshot.player.nx * size, oy + snapshot.player.ny * size, 5);
     }
 
     private onPlayerScoreChanged(_: any, value: number) {

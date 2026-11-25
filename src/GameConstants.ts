@@ -6,6 +6,7 @@ export default class GameConstants {
         EXP_CHANGED_EVENT: "expChanged",
         LEVEL_UP_EVENT: "levelUp",
         UPGRADE_APPLIED_EVENT: "upgradeApplied",
+        RADAR_UPDATE_EVENT: "radarUpdate",
     } as const);
 
     public static readonly SceneKeys = Object.freeze({
@@ -16,8 +17,8 @@ export default class GameConstants {
         GAME_OVER: "GameOverScene",
     } as const);
 
-    public static readonly MAP_WIDTH: number = 2160;
-    public static readonly MAP_HEIGHT: number = 2160;
+    public static readonly MAP_WIDTH: number = 3600;
+    public static readonly MAP_HEIGHT: number = 3600;
     public static readonly MAX_SCORE_DIGITS: number = 6;
 
     public static readonly ARENA_WIDTH: number = 3400;

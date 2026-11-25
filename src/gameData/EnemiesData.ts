@@ -4,6 +4,7 @@ export type EnemyBulletConfig = {
     color: number | string;
     speed: number;
     damage: number;
+    frame?: string;
 };
 
 export type EnemyTypeData = {

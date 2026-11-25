@@ -28,14 +28,7 @@ export default class MainGameScene extends Scene {
         this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
 
-        this.add.tileSprite(0, 0, mapWidth, mapHeight, 'bg')
-            .setOrigin(0, 0)
-            .setTileScale(2);
-
-        this.add.image(mapWidth * 0.5, mapHeight * 0.35, 'planet')
-            .setAlpha(0.45);
-
-        this.drawArenaBounds(mapWidth, mapHeight);
+        this.createSpaceEnvironment(mapWidth, mapHeight);
 
         if (!this.entityManager) {
             console.error('EntityManager plugin not found');
@@ -72,12 +65,66 @@ export default class MainGameScene extends Scene {
         console.log("MainGameScene created");
     }
 
-    private drawArenaBounds(mapWidth: number, mapHeight: number) {
-        const graphics = this.add.graphics().setDepth(1);
+    private createSpaceEnvironment(mapWidth: number, mapHeight: number) {
+        // Base tiled space backdrop
+        this.add.tileSprite(0, 0, mapWidth, mapHeight, 'bg')
+            .setOrigin(0, 0)
+            .setTileScale(2)
+            .setAlpha(0.75)
+            .setDepth(0);
 
-        // Subtle arena grid for spatial movement feedback
-        graphics.lineStyle(2, 0x6366f1, 0.16);
-        const gridSize = 180;
+        // Soft glowing space nebulae clouds across the arena
+        const nebulaColors = [0x4c1d95, 0x0e7490, 0x831843, 0x1e3a8a, 0x312e81];
+        for (let i = 0; i < 12; i++) {
+            const nx = Phaser.Math.Between(250, mapWidth - 250);
+            const ny = Phaser.Math.Between(250, mapHeight - 250);
+            const radius = Phaser.Math.Between(260, 520);
+            const color = nebulaColors[i % nebulaColors.length];
+            this.add.circle(nx, ny, radius, color, 0.08).setDepth(0);
+            this.add.circle(nx + 40, ny - 30, radius * 0.6, color, 0.06).setDepth(0);
+        }
+
+        // Distant planets/moons as visual landmarks in the arena
+        this.add.image(mapWidth * 0.28, mapHeight * 0.25, 'planet')
+            .setScale(0.9)
+            .setAlpha(0.45)
+            .setDepth(1);
+        this.add.image(mapWidth * 0.74, mapHeight * 0.72, 'planet')
+            .setScale(0.55)
+            .setTint(0x38bdf8)
+            .setAlpha(0.32)
+            .setDepth(1);
+
+        // Twinkling starfield scattered across the arena
+        const starColors = [0xffffff, 0xbae6fd, 0xfde68a, 0xe9d5ff];
+        for (let i = 0; i < 180; i++) {
+            const sx = Phaser.Math.Between(30, mapWidth - 30);
+            const sy = Phaser.Math.Between(30, mapHeight - 30);
+            const radius = Phaser.Math.FloatBetween(1.2, 3.2);
+            const alpha = Phaser.Math.FloatBetween(0.25, 0.85);
+            const star = this.add.circle(sx, sy, radius, starColors[i % starColors.length], alpha).setDepth(1);
+
+            if (i % 5 === 0) {
+                this.tweens.add({
+                    targets: star,
+                    alpha: 0.12,
+                    duration: Phaser.Math.Between(1200, 2600),
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+            }
+        }
+
+        this.drawArenaBounds(mapWidth, mapHeight);
+    }
+
+    private drawArenaBounds(mapWidth: number, mapHeight: number) {
+        const graphics = this.add.graphics().setDepth(2);
+
+        // Subtle tactical sector grid for clear spatial movement feedback
+        graphics.lineStyle(2, 0x6366f1, 0.14);
+        const gridSize = 240;
         for (let x = gridSize; x < mapWidth; x += gridSize) {
             graphics.lineBetween(x, 0, x, mapHeight);
         }
@@ -85,9 +132,19 @@ export default class MainGameScene extends Scene {
             graphics.lineBetween(0, y, mapWidth, y);
         }
 
-        // Visible outer map barrier
-        graphics.lineStyle(12, 0xf43f5e, 0.85);
-        graphics.strokeRect(6, 6, mapWidth - 12, mapHeight - 12);
+        // Glowing intersection markers
+        graphics.fillStyle(0x818cf8, 0.28);
+        for (let x = gridSize; x < mapWidth; x += gridSize) {
+            for (let y = gridSize; y < mapHeight; y += gridSize) {
+                graphics.fillCircle(x, y, 4);
+            }
+        }
+
+        // Double-layered neon energy barrier around the map perimeter
+        graphics.lineStyle(18, 0xf43f5e, 0.25);
+        graphics.strokeRect(10, 10, mapWidth - 20, mapHeight - 20);
+        graphics.lineStyle(6, 0xfb7185, 0.9);
+        graphics.strokeRect(10, 10, mapWidth - 20, mapHeight - 20);
     }
 
     private openLevelUpModal(player: Player) {
