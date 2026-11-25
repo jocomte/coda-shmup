@@ -3,13 +3,18 @@ import Health from "../components/Health.ts";
 import Player from "../entities/Player.ts";
 import RegistryConstants from "../RegistryConstants.ts";
 import SaveManager from "../managers/SaveManager.ts";
+import AudioManager from "../managers/AudioManager.ts";
 import SaveConstants from "../SaveConstants.ts";
 import EntityManager from "../managers/EntityManager.ts";
 import GameConstants from "../GameConstants.ts";
+import { GamepadEdgeTracker } from "../utils/GamepadUtils.ts";
 
 export default class MainGameScene extends Scene {
     private saveManager: SaveManager;
+    private audioManager: AudioManager;
     private entityManager: EntityManager;
+    private readonly _gamepadTracker = new GamepadEdgeTracker();
+    private _player?: Player;
 
     constructor() {
         super(GameConstants.SceneKeys.MAIN_GAME);
@@ -21,6 +26,12 @@ export default class MainGameScene extends Scene {
             console.error('SaveManager plugin not found');
         }
         this.saveManager?.load();
+
+        this.audioManager = this.game.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager;
+        this.audioManager?.initSettingsFromSave();
+        this.audioManager?.ensureMusicStarted();
+
+        this._gamepadTracker.reset(this);
 
         const mapWidth = GameConstants.MAP_WIDTH;
         const mapHeight = GameConstants.MAP_HEIGHT;
@@ -35,13 +46,18 @@ export default class MainGameScene extends Scene {
         }
 
         const player = this.entityManager.initAndSpawnPlayer();
+        this._player = player;
+        this.registry.set(RegistryConstants.Keys.PLAYER_SCORE, 0);
+        this.registry.set(RegistryConstants.Keys.PLAYER_LEVEL, player.level);
+
         player.getComponent(Health)?.once(Health.DEATH_EVENT, () => {
             // Hide the player and let its explosion play before showing the game over screen
             player.disableBody(true, true);
             this.time.delayedCall(1000, this.endGame, [], this);
         }, this);
 
-        const onLevelUp = () => {
+        const onLevelUp = (level: number) => {
+            this.registry.set(RegistryConstants.Keys.PLAYER_LEVEL, level);
             this.openLevelUpModal(player);
         };
         this.game.events.on(GameConstants.Events.LEVEL_UP_EVENT, onLevelUp, this);
@@ -56,13 +72,23 @@ export default class MainGameScene extends Scene {
 
         if (this.input.keyboard) {
             this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R).on('down', () => this.scene.restart());
+            this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on('down', () => this.openPauseModal());
+            this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P).on('down', () => this.openPauseModal());
+            this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M).on('down', () => this.audioManager?.toggleMute());
         } else {
             console.error('No keyboard input');
         }
 
-        this.registry.set(RegistryConstants.Keys.PLAYER_SCORE, 0);
-
         console.log("MainGameScene created");
+    }
+
+    public openPauseModal() {
+        if (!this._player?.active) return;
+        if (this.scene.isPaused(GameConstants.SceneKeys.MAIN_GAME)) return;
+        if (this.scene.isActive(GameConstants.SceneKeys.LEVEL_UP) || this.scene.isActive(GameConstants.SceneKeys.PAUSE)) return;
+
+        this.scene.pause(GameConstants.SceneKeys.MAIN_GAME);
+        this.scene.launch(GameConstants.SceneKeys.PAUSE);
     }
 
     private createSpaceEnvironment(mapWidth: number, mapHeight: number) {
@@ -161,10 +187,14 @@ export default class MainGameScene extends Scene {
             console.log("New Best Score: " + currentScore);
         }
 
+        this.registry.set(RegistryConstants.Keys.PLAYER_LEVEL, this._player?.level ?? 1);
         this.scene.start(GameConstants.SceneKeys.GAME_OVER);
     }
 
     update(_timeSinceLaunch: number, _deltaTime: number) {
-        // Arena is static in world space; camera follows the player
+        const pad = this._gamepadTracker.poll(this);
+        if (pad.pause) {
+            this.openPauseModal();
+        }
     }
 }

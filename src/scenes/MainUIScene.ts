@@ -1,8 +1,11 @@
 import { GameObjects, Scenes, Scene } from "phaser";
 import Health from "../components/Health.ts";
 import Player, { type ActivePowerUpStatus, type ExpStatus } from "../entities/Player.ts";
+import AudioManager from "../managers/AudioManager.ts";
 import GameConstants from "../GameConstants.ts";
 import RegistryConstants from "../RegistryConstants.ts";
+import { getActiveGamepad } from "../utils/GamepadUtils.ts";
+import type MainGameScene from "./MainGameScene.ts";
 
 type RadarSnapshot = {
     player: { nx: number; ny: number };
@@ -25,6 +28,8 @@ export default class MainUIScene extends Scene {
 
     private _scoreText!: GameObjects.BitmapText;
     private _powerUpsText!: GameObjects.Text;
+    private _muteBtnText!: GameObjects.Text;
+    private _gamepadBadge!: GameObjects.Text;
     private _radarGraphics!: GameObjects.Graphics;
     private _radarOriginX: number = 0;
     private _radarOriginY: number = 0;
@@ -39,6 +44,7 @@ export default class MainUIScene extends Scene {
         this.game.events.on(GameConstants.Events.EXP_CHANGED_EVENT, this.onExpChanged, this);
         this.game.events.on(GameConstants.Events.POWERUP_CHANGED_EVENT, this.onPowerUpsChanged, this);
         this.game.events.on(GameConstants.Events.RADAR_UPDATE_EVENT, this.onRadarUpdate, this);
+        this.game.events.on(GameConstants.Events.AUDIO_CHANGED_EVENT, this.refreshMuteLabel, this);
         this.registry.events.on(RegistryConstants.Events.PLAYER_SCORE_CHANGE, this.onPlayerScoreChanged, this);
 
         this.events.once(Scenes.Events.SHUTDOWN, () => {
@@ -46,6 +52,7 @@ export default class MainUIScene extends Scene {
             this.game.events.off(GameConstants.Events.EXP_CHANGED_EVENT, this.onExpChanged, this);
             this.game.events.off(GameConstants.Events.POWERUP_CHANGED_EVENT, this.onPowerUpsChanged, this);
             this.game.events.off(GameConstants.Events.RADAR_UPDATE_EVENT, this.onRadarUpdate, this);
+            this.game.events.off(GameConstants.Events.AUDIO_CHANGED_EVENT, this.refreshMuteLabel, this);
             this.registry.events.off(RegistryConstants.Events.PLAYER_SCORE_CHANGE, this.onPlayerScoreChanged, this);
         }, this);
     }
@@ -118,6 +125,37 @@ export default class MainUIScene extends Scene {
         this._scoreText = this.add.bitmapText(this.scale.width - marginX, 74, "future-bmp", scoreStr, 96)
             .setOrigin(1, 0);
 
+        // Quick Pause & Mute buttons under score
+        const pauseBtnBg = this.add.rectangle(this.scale.width - marginX, 180, 156, 44, 0x0f172a, 0.85)
+            .setOrigin(1, 0)
+            .setStrokeStyle(2, 0x38bdf8, 0.75)
+            .setInteractive({ useHandCursor: true });
+        this.add.text(this.scale.width - marginX - 78, 202, 'PAUSE', {
+            fontSize: '22px',
+            fontFamily: 'future, sans-serif',
+            color: '#e2e8f0',
+        }).setOrigin(0.5);
+        pauseBtnBg.on('pointerdown', () => {
+            const gameScene = this.scene.get(GameConstants.SceneKeys.MAIN_GAME) as MainGameScene | undefined;
+            gameScene?.openPauseModal();
+        });
+
+        const muteBtnBg = this.add.rectangle(this.scale.width - marginX - 170, 180, 150, 44, 0x0f172a, 0.85)
+            .setOrigin(1, 0)
+            .setStrokeStyle(2, 0x64748b, 0.75)
+            .setInteractive({ useHandCursor: true });
+        this._muteBtnText = this.add.text(this.scale.width - marginX - 245, 202, 'SON ON', {
+            fontSize: '20px',
+            fontFamily: 'future, sans-serif',
+            color: '#4ade80',
+        }).setOrigin(0.5);
+        muteBtnBg.on('pointerdown', () => {
+            const audio = this.game.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager | undefined;
+            audio?.toggleMute();
+            this.refreshMuteLabel();
+        });
+        this.refreshMuteLabel();
+
         // Active temporary power-ups
         this._powerUpsText = this.add.text(marginX, 134, "", {
             fontSize: '26px',
@@ -142,9 +180,34 @@ export default class MainUIScene extends Scene {
 
         this._radarGraphics = this.add.graphics();
 
+        // Gamepad connection status badge (bottom-left)
+        this._gamepadBadge = this.add.text(36, this.scale.height - 36, 'MANETTE CONNECTÉE', {
+            fontSize: '20px',
+            fontFamily: 'future, sans-serif',
+            color: '#38bdf8',
+            stroke: '#000000',
+            strokeThickness: 4,
+        }).setOrigin(0, 1).setVisible(false);
+
         this.scene.bringToTop();
 
         console.log("MainUIScene created");
+    }
+
+    update() {
+        if (this._gamepadBadge) {
+            this._gamepadBadge.setVisible(getActiveGamepad(this) !== null);
+        }
+    }
+
+    private refreshMuteLabel() {
+        if (!this._muteBtnText) return;
+        const audio = this.game.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager | undefined;
+        if (audio?.muted) {
+            this._muteBtnText.setText('SON OFF').setColor('#f87171');
+        } else {
+            this._muteBtnText.setText('SON ON').setColor('#4ade80');
+        }
     }
 
     private onRadarUpdate(snapshot: RadarSnapshot) {

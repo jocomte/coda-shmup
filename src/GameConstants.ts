@@ -7,6 +7,7 @@ export default class GameConstants {
         LEVEL_UP_EVENT: "levelUp",
         UPGRADE_APPLIED_EVENT: "upgradeApplied",
         RADAR_UPDATE_EVENT: "radarUpdate",
+        AUDIO_CHANGED_EVENT: "audioChanged",
     } as const);
 
     public static readonly SceneKeys = Object.freeze({
@@ -14,6 +15,7 @@ export default class GameConstants {
         MAIN_GAME: "MainGameScene",
         MAIN_UI: "MainUIScene",
         LEVEL_UP: "LevelUpScene",
+        PAUSE: "PauseScene",
         GAME_OVER: "GameOverScene",
     } as const);
 

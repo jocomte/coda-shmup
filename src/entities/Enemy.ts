@@ -2,6 +2,7 @@ import { GameObjects } from 'phaser';
 import type { BulletData } from '../gameData/BulletData.ts';
 import type { EnemyTypeData } from '../gameData/EnemiesData.ts';
 import Entity from './Entity.ts';
+import AudioManager from "../managers/AudioManager.ts";
 import Health from "../components/Health.ts";
 import Movement from "../components/Movement.ts";
 import Weapon from "../components/Weapon.ts";
@@ -226,7 +227,8 @@ export default class Enemy extends Entity {
         const spreadAngle = this._enemyData?.spreadAngle ?? 0;
 
         this.getComponent(Weapon)?.shoot(this, bulletCount, spreadAngle);
-        this.scene.sound.play('sfx_laser2', { volume: 0.25 });
+        const audio = this.scene.game.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager | undefined;
+        audio?.playSfx('sfx_laser2', 0.25);
     }
 
     private shoot() {

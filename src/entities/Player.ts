@@ -6,9 +6,11 @@ import { UPGRADE_DEFINITIONS, UpgradeDefinition, UpgradeId } from "../gameData/U
 import Entity from './Entity.ts';
 import GameConstants from "../GameConstants.ts";
 import RegistryConstants from "../RegistryConstants.ts";
+import AudioManager from "../managers/AudioManager.ts";
 import Health from "../components/Health.ts";
 import Movement from "../components/Movement.ts";
 import Weapon from "../components/Weapon.ts";
+import { getActiveGamepad, readGamepadMove, readGamepadRightStick } from "../utils/GamepadUtils.ts";
 
 type MoveKeys = {
     up: Input.Keyboard.Key;
@@ -51,7 +53,10 @@ export default class Player extends Entity {
     private _baseRateOfFire: number;
     private _lastShotTime: number;
     private _enemiesGroup?: Phaser.Physics.Arcade.Group;
+    private _audioManager?: AudioManager;
     private readonly _moveDirection: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
+    private readonly _gamepadMove: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
+    private readonly _gamepadAim: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
 
     // Temporary field power-up timers
     private _multiShotRemainingMs: number = 0;
@@ -131,6 +136,7 @@ export default class Player extends Entity {
 
     public init(bulletsGroup: Phaser.Physics.Arcade.Group, enemiesGroup?: Phaser.Physics.Arcade.Group) {
         this._enemiesGroup = enemiesGroup;
+        this._audioManager = this.scene.game.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager | undefined;
 
         this.addComponent(new Health(100, this));
         this.addComponent(new Movement());
@@ -174,6 +180,8 @@ export default class Player extends Entity {
         if (!health || !this.arcadeBody.enable) return;
 
         health.damage(amount);
+        this._audioManager?.playSfx('sfx_hit', 0.8);
+        this.scene.cameras.main.flash(140, 220, 38, 38, false);
         if (health.current <= 0) return;
 
         this.arcadeBody.setEnable(false);
@@ -224,7 +232,10 @@ export default class Player extends Entity {
         this.emitExpState();
 
         if (this._pendingLevelUps > 0) {
+            this._audioManager?.playSfx('sfx_levelup', 0.85);
             this.triggerNextLevelUp();
+        } else {
+            this._audioManager?.playSfx('sfx_exp', 0.45);
         }
     }
 
@@ -342,6 +353,7 @@ export default class Player extends Entity {
                 break;
         }
 
+        this._audioManager?.playSfx('sfx_powerup', 0.75);
         this.showFloatingPickupText(config.label, config.tint);
         this.emitPowerUpState();
     }
@@ -527,7 +539,7 @@ export default class Player extends Entity {
 
         this.updatePowerUpTimers(timeSinceLaunch, deltaTime);
 
-        // Move in 4 directions (Arrows / WASD / ZQSD)
+        // Move in 4 directions (Arrows / WASD / ZQSD + Gamepad left stick / D-pad)
         this._moveDirection.set(0.0);
         if (this._moveKeys) {
             if (this._moveKeys.left.isDown || this._moveKeys.a.isDown || this._moveKeys.q.isDown)
@@ -542,6 +554,11 @@ export default class Player extends Entity {
 
         if (this._moveDirection.lengthSq() > 0) {
             this._moveDirection.normalize();
+        } else if (readGamepadMove(this.scene, this._gamepadMove)) {
+            this._moveDirection.copy(this._gamepadMove);
+        }
+
+        if (this._moveDirection.lengthSq() > 0) {
             this.getComponent(Movement)?.move(this, this._moveDirection, deltaTime);
 
             if (timeSinceLaunch - this._lastTrailTime > 55) {
@@ -556,9 +573,12 @@ export default class Player extends Entity {
         this.x = Phaser.Math.Clamp(this.x, bounds.left + margin, bounds.right - margin);
         this.y = Phaser.Math.Clamp(this.y, bounds.top + margin, bounds.bottom - margin);
 
-        // Hero shooter auto-aim & auto-shoot towards the nearest active enemy
+        // Twin-stick right stick override, otherwise auto-aim towards nearest active enemy
+        const hasManualAim = readGamepadRightStick(this.scene, this._gamepadAim);
         const nearestEnemy = this.findNearestEnemy();
-        if (nearestEnemy) {
+        if (hasManualAim) {
+            this.rotation = this._gamepadAim.angle();
+        } else if (nearestEnemy) {
             this.rotation = Phaser.Math.Angle.Between(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
         } else if (this._moveDirection.lengthSq() > 0) {
             this.rotation = this._moveDirection.angle();
@@ -566,7 +586,9 @@ export default class Player extends Entity {
 
         this.syncAttachmentTransforms(timeSinceLaunch);
 
-        const shouldAutoFire = nearestEnemy !== null || (this._moveKeys?.space.isDown ?? false);
+        const activePad = getActiveGamepad(this.scene);
+        const padFireHeld = Boolean(activePad && (activePad.A || activePad.R2 > 0.3 || activePad.buttons[7]?.pressed));
+        const shouldAutoFire = nearestEnemy !== null || hasManualAim || padFireHeld || (this._moveKeys?.space.isDown ?? false);
         const tempRapidFire = this._rapidFireRemainingMs > 0 ? 0.5 : 1.0;
         const currentRateOfFire = this._baseRateOfFire * this._fireRateMultiplier * tempRapidFire;
 
@@ -577,7 +599,7 @@ export default class Player extends Entity {
 
             this.getComponent(Weapon)?.shoot(this, bulletCount, spreadAngle);
             this.spawnMuzzleFlash();
-            this.scene.sound.play('sfx_laser1', { volume: 0.35 });
+            this._audioManager?.playSfx('sfx_laser1', 0.35);
 
             this._lastShotTime = timeSinceLaunch;
         }

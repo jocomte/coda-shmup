@@ -1,17 +1,29 @@
-import { Input, Scene } from "phaser";
+import { GameObjects, Input, Scene, Scenes } from "phaser";
 import GameConstants from "../GameConstants.ts";
 import Player from "../entities/Player.ts";
+import AudioManager from "../managers/AudioManager.ts";
 import type { UpgradeDefinition } from "../gameData/UpgradeData.ts";
+import { GamepadEdgeTracker } from "../utils/GamepadUtils.ts";
 
 type LevelUpData = {
     player: Player;
 };
 
+type CardVisual = {
+    container: GameObjects.Container;
+    bg: GameObjects.Rectangle;
+    accentHex: number;
+};
+
 export default class LevelUpScene extends Scene {
     private _player!: Player;
     private _choices: UpgradeDefinition[] = [];
+    private _cards: CardVisual[] = [];
+    private _selectedIndex: number = 0;
     private _inputReady: boolean = false;
     private _selectionMade: boolean = false;
+    private _audioManager?: AudioManager;
+    private readonly _gamepadTracker = new GamepadEdgeTracker();
 
     constructor() {
         super(GameConstants.SceneKeys.LEVEL_UP);
@@ -20,8 +32,18 @@ export default class LevelUpScene extends Scene {
     create(data: LevelUpData) {
         this._player = data.player;
         this._choices = this._player.getUpgradeChoices(3);
+        this._cards = [];
+        this._selectedIndex = 0;
         this._inputReady = false;
         this._selectionMade = false;
+        this._gamepadTracker.reset(this);
+
+        this._audioManager = this.game.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager | undefined;
+        this._audioManager?.setDucked(true);
+
+        this.events.once(Scenes.Events.SHUTDOWN, () => {
+            this._audioManager?.setDucked(false);
+        }, this);
 
         if (this._choices.length === 0) {
             this.finishSelection();
@@ -62,9 +84,12 @@ export default class LevelUpScene extends Scene {
             this.createUpgradeCard(width / 2, cardY, cardWidth, cardHeight, choice, index);
         });
 
-        this.add.text(width / 2, startY + 3 * spacing - 30, 'Cliquez ou appuyez sur [1] [2] [3]', {
-            fontSize: '26px',
+        this.refreshCardHighlight();
+
+        this.add.text(width / 2, startY + 3 * spacing - 30, 'Cliquez, appuyez sur [1] [2] [3] ou ↑↓ + Entrée / Manette A', {
+            fontSize: '24px',
             color: '#94a3b8',
+            align: 'center',
         }).setOrigin(0.5);
 
         // Small delay so held movement/action keys don't immediately pick an upgrade
@@ -73,7 +98,7 @@ export default class LevelUpScene extends Scene {
         });
 
         this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-            if (!this._inputReady || this._selectionMade) return;
+            if (!this._inputReady || this._selectionMade || event.repeat) return;
 
             if (event.keyCode === Input.Keyboard.KeyCodes.ONE && this._choices[0]) {
                 this.selectUpgrade(this._choices[0]);
@@ -81,10 +106,49 @@ export default class LevelUpScene extends Scene {
                 this.selectUpgrade(this._choices[1]);
             } else if (event.keyCode === Input.Keyboard.KeyCodes.THREE && this._choices[2]) {
                 this.selectUpgrade(this._choices[2]);
+            } else if (event.keyCode === Input.Keyboard.KeyCodes.UP || event.keyCode === Input.Keyboard.KeyCodes.W || event.keyCode === Input.Keyboard.KeyCodes.Z) {
+                this.moveSelection(-1);
+            } else if (event.keyCode === Input.Keyboard.KeyCodes.DOWN || event.keyCode === Input.Keyboard.KeyCodes.S) {
+                this.moveSelection(1);
+            } else if (event.keyCode === Input.Keyboard.KeyCodes.ENTER || event.keyCode === Input.Keyboard.KeyCodes.SPACE) {
+                if (this._choices[this._selectedIndex]) {
+                    this.selectUpgrade(this._choices[this._selectedIndex]);
+                }
             }
         });
 
         this.scene.bringToTop();
+    }
+
+    update() {
+        if (!this._inputReady || this._selectionMade) return;
+
+        const pad = this._gamepadTracker.poll(this);
+        if (pad.up) this.moveSelection(-1);
+        if (pad.down) this.moveSelection(1);
+        if (pad.confirm && this._choices[this._selectedIndex]) {
+            this.selectUpgrade(this._choices[this._selectedIndex]);
+        }
+    }
+
+    private moveSelection(delta: number) {
+        if (this._choices.length === 0) return;
+        this._selectedIndex = (this._selectedIndex + delta + this._choices.length) % this._choices.length;
+        this.refreshCardHighlight();
+    }
+
+    private refreshCardHighlight() {
+        this._cards.forEach((card, idx) => {
+            if (idx === this._selectedIndex) {
+                card.bg.setFillStyle(0x1e293b, 1);
+                card.bg.setStrokeStyle(5, card.accentHex, 1);
+                card.container.setScale(1.03);
+            } else {
+                card.bg.setFillStyle(0x0f172a, 0.96);
+                card.bg.setStrokeStyle(3, card.accentHex, 0.6);
+                card.container.setScale(1);
+            }
+        });
     }
 
     private createUpgradeCard(
@@ -131,15 +195,11 @@ export default class LevelUpScene extends Scene {
         }).setOrigin(0, 0.5);
 
         container.add([bg, iconBg, icon, titleText, rankText, descText]);
+        this._cards.push({ container, bg, accentHex });
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(0x1e293b, 1);
-            container.setScale(1.03);
-        });
-
-        bg.on('pointerout', () => {
-            bg.setFillStyle(0x0f172a, 0.96);
-            container.setScale(1);
+            this._selectedIndex = index;
+            this.refreshCardHighlight();
         });
 
         bg.on('pointerdown', () => {
