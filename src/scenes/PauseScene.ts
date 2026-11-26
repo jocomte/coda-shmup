@@ -2,6 +2,15 @@ import { GameObjects, Input, Scene, Scenes } from "phaser";
 import GameConstants from "../GameConstants.ts";
 import AudioManager from "../managers/AudioManager.ts";
 import { GamepadEdgeTracker } from "../utils/GamepadUtils.ts";
+import { drawChamferPanel, drawChamferRectTopLeft } from "../utils/UITheme.ts";
+
+type PauseRowVisual = {
+    gfx: GameObjects.Graphics;
+    chevron: GameObjects.Text;
+    cx: number;
+    cy: number;
+    accentColor: number;
+};
 
 export default class PauseScene extends Scene {
     private audioManager?: AudioManager;
@@ -9,15 +18,21 @@ export default class PauseScene extends Scene {
     private _inputReady: boolean = false;
     private readonly _gamepadTracker = new GamepadEdgeTracker();
 
-    private _rowBgs: GameObjects.Rectangle[] = [];
+    private _rows: PauseRowVisual[] = [];
     private _musicBarFill!: GameObjects.Rectangle;
+    private _musicThumb!: GameObjects.Arc;
+    private _musicBarX: number = 0;
     private _musicValueText!: GameObjects.Text;
     private _sfxBarFill!: GameObjects.Rectangle;
+    private _sfxThumb!: GameObjects.Arc;
+    private _sfxBarX: number = 0;
     private _sfxValueText!: GameObjects.Text;
     private _muteValueText!: GameObjects.Text;
 
     private static readonly ITEM_COUNT = 6;
-    private static readonly SLIDER_WIDTH = 300;
+    private static readonly ROW_WIDTH = 740;
+    private static readonly ROW_HEIGHT = 100;
+    private static readonly SLIDER_WIDTH = 280;
 
     constructor() {
         super(GameConstants.SceneKeys.PAUSE);
@@ -29,35 +44,51 @@ export default class PauseScene extends Scene {
 
         this._selectedIndex = 0;
         this._inputReady = false;
-        this._rowBgs = [];
+        this._rows = [];
         this._gamepadTracker.reset(this);
 
         const width = this.scale.width;
         const height = this.scale.height;
+        const cx = width / 2;
+        const cy = height / 2;
 
         // Dimmed backdrop
-        this.add.rectangle(0, 0, width, height, 0x050816, 0.80).setOrigin(0, 0);
+        this.add.rectangle(0, 0, width, height, 0x030712, 0.84).setOrigin(0, 0);
 
-        // Panel card
-        const panelW = 860;
-        const panelH = 1120;
-        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x0f172a, 0.96)
-            .setStrokeStyle(4, 0x38bdf8, 0.9);
+        // Chamfered Console Panel
+        const panelGfx = this.add.graphics();
+        drawChamferPanel(panelGfx, cx, cy, 880, 1140, {
+            cut: 24,
+            fillColor: 0x0b1324,
+            fillAlpha: 0.96,
+            strokeColor: 0x38bdf8,
+            strokeAlpha: 0.92,
+            lineWidth: 3,
+            brackets: true,
+            bracketLen: 24,
+            bracketColor: 0x7dd3fc,
+        });
 
-        this.add.text(width / 2, height / 2 - 470, 'PAUSE', {
-            fontSize: '72px',
+        this.add.text(cx, cy - 498, 'SYSTÈME EN VEILLE', {
+            fontSize: '18px',
             fontFamily: 'future, sans-serif',
-            color: '#38bdf8',
-            stroke: '#000000',
-            strokeThickness: 6,
+            color: '#7dd3fc',
         }).setOrigin(0.5);
 
-        const cx = width / 2;
-        const startY = height / 2 - 300;
-        const stepY = 140;
+        this.add.text(cx, cy - 442, 'PAUSE', {
+            fontSize: '68px',
+            fontFamily: 'future, sans-serif',
+            color: '#38bdf8',
+            stroke: '#020617',
+            strokeThickness: 8,
+            shadow: { offsetX: 0, offsetY: 0, color: '#0ea5e9', blur: 16, fill: true },
+        }).setOrigin(0.5);
+
+        const startY = cy - 292;
+        const stepY = 136;
 
         // 0. Resume
-        this.createActionRow(0, cx, startY, 'REPRENDRE', '#4ade80', () => this.resumeGame());
+        this.createActionRow(0, cx, startY, 'REPRENDRE LA PARTIE', '#4ade80', 0x4ade80, () => this.resumeGame());
 
         // 1. Music Volume Slider
         const musicRow = this.createSliderRow(
@@ -70,6 +101,8 @@ export default class PauseScene extends Scene {
             (ratio) => this.audioManager?.setMusicVolume(ratio)
         );
         this._musicBarFill = musicRow.fill;
+        this._musicThumb = musicRow.thumb;
+        this._musicBarX = musicRow.barX;
         this._musicValueText = musicRow.valueText;
 
         // 2. SFX Volume Slider
@@ -83,26 +116,28 @@ export default class PauseScene extends Scene {
             (ratio) => this.audioManager?.setSfxVolume(ratio)
         );
         this._sfxBarFill = sfxRow.fill;
+        this._sfxThumb = sfxRow.thumb;
+        this._sfxBarX = sfxRow.barX;
         this._sfxValueText = sfxRow.valueText;
 
         // 3. Mute Toggle
-        const muteRow = this.createToggleRow(3, cx, startY + stepY * 3, 'COUPER LE SON', () => {
+        const muteRow = this.createToggleRow(3, cx, startY + stepY * 3, 'AUDIO GLOBAL', () => {
             this.audioManager?.toggleMute();
             this.refreshAudioUI();
         });
         this._muteValueText = muteRow.valueText;
 
         // 4. Restart
-        this.createActionRow(4, cx, startY + stepY * 4, 'RECOMMENCER', '#fbbf24', () => this.restartGame());
+        this.createActionRow(4, cx, startY + stepY * 4, 'RECOMMENCER', '#fbbf24', 0xfbbf24, () => this.restartGame());
 
         // 5. Quit to Home
-        this.createActionRow(5, cx, startY + stepY * 5, 'MENU PRINCIPAL', '#f87171', () => this.quitToHome());
+        this.createActionRow(5, cx, startY + stepY * 5, 'MENU PRINCIPAL', '#f87171', 0xf87171, () => this.quitToHome());
 
-        this.add.text(cx, height / 2 + 505, 'Clavier / Souris / Manette : ↑↓ Naviguer • ←→ Volume • A/Entrée Valider • ESC/Start Reprendre', {
-            fontSize: '20px',
+        this.add.text(cx, cy + 504, '↑↓ Naviguer  •  ←→ Régler Volume  •  Entrée / A Valider  •  ESC / Start Reprendre', {
+            fontSize: '19px',
             color: '#94a3b8',
             align: 'center',
-            wordWrap: { width: 780 },
+            wordWrap: { width: 790 },
         }).setOrigin(0.5);
 
         this.refreshSelectionHighlight();
@@ -171,56 +206,67 @@ export default class PauseScene extends Scene {
         if (pad.back || pad.pause) this.resumeGame();
     }
 
-    private createActionRow(index: number, cx: number, cy: number, label: string, color: string, onClick: () => void) {
-        const bg = this.add.rectangle(cx, cy, 720, 100, 0x1e293b, 0.9)
-            .setStrokeStyle(3, 0x475569, 0.8)
+    private registerRowVisual(index: number, cx: number, cy: number, accentColor: number) {
+        const gfx = this.add.graphics();
+        const chevron = this.add.text(cx - PauseScene.ROW_WIDTH / 2 + 24, cy, '▸', {
+            fontSize: '28px',
+            fontFamily: 'future, sans-serif',
+            color: '#38bdf8',
+        }).setOrigin(0.5);
+
+        this._rows[index] = { gfx, chevron, cx, cy, accentColor };
+        return gfx;
+    }
+
+    private createActionRow(index: number, cx: number, cy: number, label: string, color: string, accentColor: number, onClick: () => void) {
+        this.registerRowVisual(index, cx, cy, accentColor);
+
+        const hit = this.add.rectangle(cx, cy, PauseScene.ROW_WIDTH, PauseScene.ROW_HEIGHT, 0x000000, 0)
             .setInteractive({ useHandCursor: true });
 
         this.add.text(cx, cy, label, {
-            fontSize: '34px',
+            fontSize: '30px',
             fontFamily: 'future, sans-serif',
             color,
         }).setOrigin(0.5);
 
-        bg.on('pointerover', () => {
+        hit.on('pointerover', () => {
             this._selectedIndex = index;
             this.refreshSelectionHighlight();
         });
-        bg.on('pointerdown', () => {
+        hit.on('pointerdown', () => {
             if (!this._inputReady) return;
             onClick();
         });
-
-        this._rowBgs[index] = bg;
     }
 
     private createToggleRow(index: number, cx: number, cy: number, label: string, onClick: () => void) {
-        const bg = this.add.rectangle(cx, cy, 720, 100, 0x1e293b, 0.9)
-            .setStrokeStyle(3, 0x475569, 0.8)
+        this.registerRowVisual(index, cx, cy, 0x38bdf8);
+
+        const hit = this.add.rectangle(cx, cy, PauseScene.ROW_WIDTH, PauseScene.ROW_HEIGHT, 0x000000, 0)
             .setInteractive({ useHandCursor: true });
 
-        this.add.text(cx - 320, cy, label, {
-            fontSize: '30px',
+        this.add.text(cx - PauseScene.ROW_WIDTH / 2 + 54, cy, label, {
+            fontSize: '26px',
             fontFamily: 'future, sans-serif',
             color: '#e2e8f0',
         }).setOrigin(0, 0.5);
 
-        const valueText = this.add.text(cx + 310, cy, 'ACTIF', {
-            fontSize: '30px',
+        const valueText = this.add.text(cx + PauseScene.ROW_WIDTH / 2 - 34, cy, 'ACTIF', {
+            fontSize: '26px',
             fontFamily: 'future, sans-serif',
             color: '#4ade80',
         }).setOrigin(1, 0.5);
 
-        bg.on('pointerover', () => {
+        hit.on('pointerover', () => {
             this._selectedIndex = index;
             this.refreshSelectionHighlight();
         });
-        bg.on('pointerdown', () => {
+        hit.on('pointerdown', () => {
             if (!this._inputReady) return;
             onClick();
         });
 
-        this._rowBgs[index] = bg;
         return { valueText };
     }
 
@@ -233,65 +279,86 @@ export default class PauseScene extends Scene {
         onStep: (delta: number) => void,
         onBarClick: (ratio: number) => void
     ) {
-        const bg = this.add.rectangle(cx, cy, 720, 100, 0x1e293b, 0.9)
-            .setStrokeStyle(3, 0x475569, 0.8)
-            .setInteractive();
+        this.registerRowVisual(index, cx, cy, fillColor);
 
-        bg.on('pointerover', () => {
+        const hit = this.add.rectangle(cx, cy, PauseScene.ROW_WIDTH, PauseScene.ROW_HEIGHT, 0x000000, 0)
+            .setInteractive();
+        hit.on('pointerover', () => {
             this._selectedIndex = index;
             this.refreshSelectionHighlight();
         });
 
-        this.add.text(cx - 320, cy, label, {
-            fontSize: '28px',
+        this.add.text(cx - PauseScene.ROW_WIDTH / 2 + 54, cy, label, {
+            fontSize: '25px',
             fontFamily: 'future, sans-serif',
             color: '#e2e8f0',
         }).setOrigin(0, 0.5);
 
-        // Minus button
-        const minusBtn = this.add.text(cx - 45, cy, '[-]', {
-            fontSize: '30px',
+        // Minus pill
+        const minusX = cx - 64;
+        const minusBg = this.add.rectangle(minusX, cy, 46, 40, 0x0f172a, 0.95)
+            .setStrokeStyle(1.5, 0x64748b, 0.9)
+            .setInteractive({ useHandCursor: true });
+        this.add.text(minusX, cy, '-', {
+            fontSize: '28px',
             fontFamily: 'future, sans-serif',
-            color: '#cbd5e1',
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        minusBtn.on('pointerdown', () => {
+            color: '#e2e8f0',
+        }).setOrigin(0.5);
+        minusBg.on('pointerover', () => minusBg.setStrokeStyle(2, fillColor, 1));
+        minusBg.on('pointerout', () => minusBg.setStrokeStyle(1.5, 0x64748b, 0.9));
+        minusBg.on('pointerdown', () => {
             if (this._inputReady) onStep(-0.1);
         });
 
-        // Slider bar
-        const barX = cx - 5;
-        const barBg = this.add.rectangle(barX, cy, PauseScene.SLIDER_WIDTH, 26, 0x0f172a, 1)
+        // Chamfered slider bar
+        const barX = cx - 22;
+        const trackGfx = this.add.graphics();
+        drawChamferRectTopLeft(trackGfx, barX, cy - 11, PauseScene.SLIDER_WIDTH, 22, {
+            cut: 6,
+            fillColor: 0x070e1c,
+            fillAlpha: 1,
+            strokeColor: 0x475569,
+            strokeAlpha: 0.9,
+            lineWidth: 1.5,
+        });
+        const barHit = this.add.rectangle(barX, cy, PauseScene.SLIDER_WIDTH, 32, 0x000000, 0)
             .setOrigin(0, 0.5)
-            .setStrokeStyle(2, 0x64748b, 0.9)
             .setInteractive({ useHandCursor: true });
 
-        const fill = this.add.rectangle(barX + 2, cy, PauseScene.SLIDER_WIDTH - 4, 20, fillColor, 1)
+        const fill = this.add.rectangle(barX + 3, cy, PauseScene.SLIDER_WIDTH - 6, 14, fillColor, 1)
             .setOrigin(0, 0.5);
+        const thumb = this.add.circle(barX + PauseScene.SLIDER_WIDTH - 3, cy, 11, 0xf8fafc, 1)
+            .setStrokeStyle(3, fillColor, 1);
 
-        barBg.on('pointerdown', (pointer: Input.Pointer) => {
+        barHit.on('pointerdown', (pointer: Input.Pointer) => {
             if (!this._inputReady) return;
             const ratio = Phaser.Math.Clamp((pointer.x - barX) / PauseScene.SLIDER_WIDTH, 0, 1);
             onBarClick(ratio);
         });
 
-        // Plus button
-        const plusBtn = this.add.text(barX + PauseScene.SLIDER_WIDTH + 32, cy, '[+]', {
-            fontSize: '30px',
+        // Plus pill
+        const plusX = barX + PauseScene.SLIDER_WIDTH + 34;
+        const plusBg = this.add.rectangle(plusX, cy, 46, 40, 0x0f172a, 0.95)
+            .setStrokeStyle(1.5, 0x64748b, 0.9)
+            .setInteractive({ useHandCursor: true });
+        this.add.text(plusX, cy, '+', {
+            fontSize: '26px',
             fontFamily: 'future, sans-serif',
-            color: '#cbd5e1',
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        plusBtn.on('pointerdown', () => {
+            color: '#e2e8f0',
+        }).setOrigin(0.5);
+        plusBg.on('pointerover', () => plusBg.setStrokeStyle(2, fillColor, 1));
+        plusBg.on('pointerout', () => plusBg.setStrokeStyle(1.5, 0x64748b, 0.9));
+        plusBg.on('pointerdown', () => {
             if (this._inputReady) onStep(0.1);
         });
 
-        const valueText = this.add.text(cx + 340, cy, '100%', {
-            fontSize: '22px',
+        const valueText = this.add.text(cx + PauseScene.ROW_WIDTH / 2 - 26, cy, '100%', {
+            fontSize: '21px',
             fontFamily: 'future, sans-serif',
             color: '#f8fafc',
         }).setOrigin(1, 0.5);
 
-        this._rowBgs[index] = bg;
-        return { fill, valueText };
+        return { fill, thumb, barX, valueText };
     }
 
     private moveSelection(delta: number) {
@@ -348,29 +415,38 @@ export default class PauseScene extends Scene {
     }
 
     private refreshSelectionHighlight() {
-        this._rowBgs.forEach((bg, idx) => {
-            if (!bg) return;
-            if (idx === this._selectedIndex) {
-                bg.setFillStyle(0x27364d, 1);
-                bg.setStrokeStyle(4, 0x38bdf8, 1);
-            } else {
-                bg.setFillStyle(0x1e293b, 0.9);
-                bg.setStrokeStyle(3, 0x475569, 0.8);
-            }
+        this._rows.forEach((row, idx) => {
+            if (!row) return;
+            const isSelected = idx === this._selectedIndex;
+            row.gfx.clear();
+            drawChamferPanel(row.gfx, row.cx, row.cy, PauseScene.ROW_WIDTH, PauseScene.ROW_HEIGHT, {
+                cut: 14,
+                fillColor: isSelected ? 0x192844 : 0x111c33,
+                fillAlpha: isSelected ? 0.98 : 0.86,
+                strokeColor: isSelected ? row.accentColor : 0x334155,
+                strokeAlpha: isSelected ? 1 : 0.8,
+                lineWidth: isSelected ? 3 : 2,
+            });
+            row.chevron.setVisible(isSelected);
         });
     }
 
     private refreshAudioUI() {
         if (!this.audioManager) return;
 
-        const musicPct = Math.round(this.audioManager.musicVolume * 100);
-        const sfxPct = Math.round(this.audioManager.sfxVolume * 100);
+        const musicVol = this.audioManager.musicVolume;
+        const sfxVol = this.audioManager.sfxVolume;
+        const musicPct = Math.round(musicVol * 100);
+        const sfxPct = Math.round(sfxVol * 100);
         const muted = this.audioManager.muted;
 
-        this._musicBarFill.width = (PauseScene.SLIDER_WIDTH - 4) * this.audioManager.musicVolume;
+        const fillW = PauseScene.SLIDER_WIDTH - 6;
+        this._musicBarFill.width = fillW * musicVol;
+        this._musicThumb.x = this._musicBarX + 3 + fillW * musicVol;
         this._musicValueText.setText(`${musicPct}%`);
 
-        this._sfxBarFill.width = (PauseScene.SLIDER_WIDTH - 4) * this.audioManager.sfxVolume;
+        this._sfxBarFill.width = fillW * sfxVol;
+        this._sfxThumb.x = this._sfxBarX + 3 + fillW * sfxVol;
         this._sfxValueText.setText(`${sfxPct}%`);
 
         if (muted) {
