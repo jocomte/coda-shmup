@@ -80,7 +80,7 @@ export function isGamepadFireHeld(): boolean {
     );
 }
 
-export type GamepadNavAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause';
+export type GamepadNavAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'dash';
 
 /**
  * Edge-triggered gamepad state tracker reading browser Gamepad API directly.
@@ -94,6 +94,7 @@ export class GamepadEdgeTracker {
         confirm: false,
         back: false,
         pause: false,
+        dash: false,
     };
 
     private readCurrentState(): Record<GamepadNavAction, boolean> {
@@ -106,6 +107,7 @@ export class GamepadEdgeTracker {
             confirm: false,
             back: false,
             pause: false,
+            dash: false,
         };
 
         if (pad) {
@@ -120,6 +122,12 @@ export class GamepadEdgeTracker {
             state.confirm = Boolean(buttons?.[0]?.pressed);
             state.back = Boolean(buttons?.[1]?.pressed);
             state.pause = Boolean(buttons?.[9]?.pressed || buttons?.[8]?.pressed);
+            state.dash = Boolean(
+                buttons?.[1]?.pressed ||
+                buttons?.[4]?.pressed ||
+                buttons?.[6]?.pressed ||
+                (buttons?.[6]?.value ?? 0) > 0.35
+            );
         }
 
         return state;
@@ -136,6 +144,7 @@ export class GamepadEdgeTracker {
             confirm: now.confirm && !this._prev.confirm,
             back: now.back && !this._prev.back,
             pause: now.pause && !this._prev.pause,
+            dash: now.dash && !this._prev.dash,
         };
 
         Object.assign(this._prev, now);

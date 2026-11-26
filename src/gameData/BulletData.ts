@@ -5,4 +5,5 @@ export type BulletData = {
     speed: number;
     damage: number;
     frame?: string;
+    pierce?: number;
 };

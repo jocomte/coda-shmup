@@ -4,6 +4,7 @@ export default class RegistryConstants {
     public static readonly Keys = Object.freeze({
         PLAYER_SCORE: 'playerScore',
         PLAYER_LEVEL: 'playerLevel',
+        SELECTED_SHIP_ID: 'selectedShipId',
     } as const);
 
     public static readonly Events = Object.freeze({

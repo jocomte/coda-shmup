@@ -8,6 +8,11 @@ export default class GameConstants {
         UPGRADE_APPLIED_EVENT: "upgradeApplied",
         RADAR_UPDATE_EVENT: "radarUpdate",
         AUDIO_CHANGED_EVENT: "audioChanged",
+        OVERDRIVE_CHANGED_EVENT: "overdriveChanged",
+        DASH_CHANGED_EVENT: "dashChanged",
+        COMBO_CHANGED_EVENT: "comboChanged",
+        BOSS_STATUS_EVENT: "bossStatus",
+        BOSS_ALERT_EVENT: "bossAlert",
     } as const);
 
     public static readonly SceneKeys = Object.freeze({

@@ -4,6 +4,8 @@ import type { BulletData } from "../gameData/BulletData.ts";
 export default class Bullet extends Physics.Arcade.Sprite {
     private _arcadeBody: Physics.Arcade.Body;
     private _damage: number = 0;
+    private _pierceRemaining: number = 0;
+    private readonly _hitTargets: Set<object> = new Set();
 
     public get damage(): number {
         return this._damage;
@@ -38,6 +40,8 @@ export default class Bullet extends Physics.Arcade.Sprite {
 
         this._arcadeBody.setVelocity(velocityX, velocityY);
         this._damage = data.damage;
+        this._pierceRemaining = data.pierce ?? 0;
+        this._hitTargets.clear();
 
         // Rotate the bullet to face the direction it's moving
         this.setRotation(this._arcadeBody.velocity.angle());
@@ -52,7 +56,21 @@ export default class Bullet extends Physics.Arcade.Sprite {
         );
     }
 
+    public hasHit(target: object): boolean {
+        return this._hitTargets.has(target);
+    }
+
+    public registerHitAndShouldDisable(target: object): boolean {
+        this._hitTargets.add(target);
+        if (this._pierceRemaining > 0) {
+            this._pierceRemaining -= 1;
+            return false;
+        }
+        return true;
+    }
+
     public disable() {
+        this._hitTargets.clear();
         this.scene.physics.world.disableBody(this._arcadeBody);
         this.setActive(false);
         this.setVisible(false);

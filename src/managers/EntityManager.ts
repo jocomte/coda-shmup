@@ -7,6 +7,7 @@ import Player from "../entities/Player.ts";
 import PowerUp from "../entities/PowerUp.ts";
 import type { EnemiesData, EnemyTypeData } from "../gameData/EnemiesData.ts";
 import { PowerUpType } from "../gameData/PowerUpData.ts";
+import AudioManager from "../managers/AudioManager.ts";
 import GroupUtils from "../utils/GroupUtils.ts";
 import GameConstants from "../GameConstants.ts";
 import RegistryConstants from "../RegistryConstants.ts";
@@ -33,6 +34,8 @@ export default class EntityManager extends Plugins.ScenePlugin {
     private _expGems: Physics.Arcade.Group;
     private _enemiesData: EnemiesData;
     private _spawnTimer?: Phaser.Time.TimerEvent;
+    private _lastBossLevelSpawned: number = 0;
+    private readonly _grazedBullets: WeakSet<Bullet> = new WeakSet();
 
     constructor(scene: Scene, pluginManager: Plugins.PluginManager) {
         super(scene, pluginManager, EntityManager.PLUGIN_KEY);
@@ -47,6 +50,8 @@ export default class EntityManager extends Plugins.ScenePlugin {
     }
 
     public initAndSpawnPlayer(): Player {
+        this._lastBossLevelSpawned = 0;
+
         this._playerBullets = this.scene!.physics.add.group(this.bulletGroupConfig);
         GroupUtils.populate(128, this._playerBullets);
 
@@ -122,10 +127,18 @@ export default class EntityManager extends Plugins.ScenePlugin {
             loop: true
         });
 
-        // Emit tactical radar snapshot for the UI
+        // Emit tactical radar snapshot + check bullet grazing
         this.scene!.time.addEvent({
-            delay: 120,
-            callback: this.emitRadarUpdate,
+            delay: 90,
+            callback: this.onFastTick,
+            callbackScope: this,
+            loop: true
+        });
+
+        // Timed Boss wave every 60s if no boss is active
+        this.scene!.time.addEvent({
+            delay: 60000,
+            callback: this.trySpawnBoss,
             callbackScope: this,
             loop: true
         });
@@ -145,15 +158,21 @@ export default class EntityManager extends Plugins.ScenePlugin {
             const bullet = bulletObj as Bullet;
             const enemy = enemyObj as Enemy;
             if (!bullet.active || !enemy.active) return;
+            if (bullet.hasHit(enemy)) return;
 
-            bullet.disable();
             enemy.getComponent(Health)?.damage(bullet.damage);
+            this._player.addOverdrive(1.5);
+
+            if (bullet.registerHitAndShouldDisable(enemy)) {
+                bullet.disable();
+            }
         });
 
         this.scene!.physics.add.overlap(this._player, this._enemyBullets, (playerObj, bulletObj) => {
             const bullet = bulletObj as Bullet;
             const player = playerObj as Player;
             if (!bullet.active || !player.active) return;
+            if (player.isDashing) return;
 
             bullet.disable();
             player.takeHitDamage(bullet.damage);
@@ -165,10 +184,13 @@ export default class EntityManager extends Plugins.ScenePlugin {
             const player = playerObj as Player;
             const enemy = enemyObj as Enemy;
             if (!player.active || !enemy.active) return;
+            if (player.isDashing) return;
 
             const contactDamage = enemy.contactDamage;
-            const enemyHealth = enemy.getComponent(Health);
-            enemyHealth?.damage(enemyHealth.max);
+            if (!enemy.isBoss) {
+                const enemyHealth = enemy.getComponent(Health);
+                enemyHealth?.damage(enemyHealth.max);
+            }
 
             player.takeHitDamage(contactDamage);
 
@@ -198,7 +220,20 @@ export default class EntityManager extends Plugins.ScenePlugin {
     }
 
     private onEnemyKilled(enemy: Enemy) {
-        this.scene!.registry.inc(RegistryConstants.Keys.PLAYER_SCORE, enemy.scoreValue);
+        this._player.registerKill(enemy.scoreValue);
+
+        if (enemy.isBoss) {
+            this.scene?.cameras.main.shake(260, 0.025);
+            for (let i = 0; i < 3; i++) {
+                this.spawnExpGemAt(
+                    enemy.x + Phaser.Math.Between(-50, 50),
+                    enemy.y + Phaser.Math.Between(-50, 50),
+                    Math.ceil(enemy.expValue / 3)
+                );
+            }
+            this.spawnPowerUpAt(enemy.x, enemy.y);
+            return;
+        }
 
         this.spawnExpGemAt(enemy.x, enemy.y, enemy.expValue);
 
@@ -248,11 +283,71 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
         // Smooth, gradual spawn speed-up as player level & score grow
         if (this._spawnTimer) {
-            const targetDelay = Math.max(550, 1650 - (playerLevel - 1) * 95 - currentScore * 2.5);
+            const targetDelay = Math.max(550, 1650 - (playerLevel - 1) * 95 - currentScore * 2);
             this._spawnTimer.timeScale = 1650 / targetDelay;
         }
 
+        // Trigger a Boss wave at level 3, 6, 9...
+        if (playerLevel >= 3 && playerLevel % 3 === 0 && this._lastBossLevelSpawned < playerLevel) {
+            this._lastBossLevelSpawned = playerLevel;
+            this.trySpawnBoss();
+        }
+
         this.spawnEnemy();
+    }
+
+    private hasActiveBoss(): boolean {
+        const children = this._enemies?.getChildren() ?? [];
+        for (let i = 0; i < children.length; i++) {
+            const e = children[i] as Enemy;
+            if (e.active && e.isBoss) return true;
+        }
+        return false;
+    }
+
+    private trySpawnBoss() {
+        if (!this._player || !this._player.active || this.hasActiveBoss()) return;
+        const bossData = this._enemiesData?.['boss'];
+        if (!bossData) return;
+
+        const boss = this._enemies.get() as Enemy;
+        if (!boss) return;
+
+        const pos = this.getSpawnPositionAroundPlayer();
+        boss.enable(pos.x, pos.y, bossData, this._player.level);
+
+        const audio = this.game!.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager | undefined;
+        audio?.playSfx('sfx_boss_alert', 0.85);
+        this.game!.events.emit(GameConstants.Events.BOSS_ALERT_EVENT, bossData.name ?? 'BOSS');
+    }
+
+    private onFastTick() {
+        this.checkBulletGraze();
+        this.emitRadarUpdate();
+    }
+
+    private checkBulletGraze() {
+        if (!this._player || !this._player.active || this._player.isDashing) return;
+
+        const innerDistSq = 40 * 40;
+        const grazeDistSq = 88 * 88;
+        const bullets = this._enemyBullets?.getChildren() ?? [];
+
+        for (let i = 0; i < bullets.length; i++) {
+            const b = bullets[i] as Bullet;
+            if (!b.active || this._grazedBullets.has(b)) continue;
+
+            const dx = b.x - this._player.x;
+            const dy = b.y - this._player.y;
+            const distSq = dx * dx + dy * dy;
+
+            if (distSq >= innerDistSq && distSq <= grazeDistSq) {
+                this._grazedBullets.add(b);
+                this._player.registerGraze();
+                // Clear marker when bullet leaves so pooled bullet can be grazed again later
+                this.scene?.time.delayedCall(900, () => this._grazedBullets.delete(b));
+            }
+        }
     }
 
     private emitRadarUpdate() {
@@ -261,12 +356,12 @@ export default class EntityManager extends Plugins.ScenePlugin {
         const mapW = GameConstants.MAP_WIDTH;
         const mapH = GameConstants.MAP_HEIGHT;
 
-        const enemies: Array<{ nx: number; ny: number }> = [];
+        const enemies: Array<{ nx: number; ny: number; isBoss?: boolean }> = [];
         const enemyChildren = this._enemies?.getChildren() ?? [];
         for (let i = 0; i < enemyChildren.length; i++) {
             const e = enemyChildren[i] as Enemy;
             if (!e.active) continue;
-            enemies.push({ nx: e.x / mapW, ny: e.y / mapH });
+            enemies.push({ nx: e.x / mapW, ny: e.y / mapH, isBoss: e.isBoss });
         }
 
         const powerUps: Array<{ nx: number; ny: number }> = [];
@@ -288,7 +383,8 @@ export default class EntityManager extends Plugins.ScenePlugin {
         if (!this._enemiesData) return undefined;
 
         const eligible: EnemyTypeData[] = Object.values(this._enemiesData).filter(
-            entry => currentScore >= entry.minScoreToSpawn || playerLevel >= entry.minLevelToSpawn
+            entry => !entry.isBoss && entry.spawnWeight > 0 &&
+                (currentScore >= entry.minScoreToSpawn || playerLevel >= entry.minLevelToSpawn)
         );
 
         if (eligible.length === 0) return undefined;

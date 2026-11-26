@@ -1,6 +1,7 @@
 import { GameObjects } from 'phaser';
 import type { BulletData } from '../gameData/BulletData.ts';
 import type { EnemyTypeData } from '../gameData/EnemiesData.ts';
+import GameConstants from '../GameConstants.ts';
 import Entity from './Entity.ts';
 import AudioManager from "../managers/AudioManager.ts";
 import Health from "../components/Health.ts";
@@ -34,6 +35,7 @@ export default class Enemy extends Entity {
     private _isHitFlashing: boolean = false;
     private _elapsedTime: number = 0;
     private _contactDamage: number = 12;
+    private _lastRecordedHp: number = 1;
     private readonly _moveDir: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
 
     private _hpBarBg?: GameObjects.Rectangle;
@@ -53,6 +55,10 @@ export default class Enemy extends Entity {
 
     public get dropChance(): number {
         return this._enemyData?.dropChance ?? 0.22;
+    }
+
+    public get isBoss(): boolean {
+        return Boolean(this._enemyData?.isBoss);
     }
 
     public init(bulletsGroup: Phaser.Physics.Arcade.Group, target: Entity) {
@@ -79,9 +85,20 @@ export default class Enemy extends Entity {
         // Listen once per enemy, not on every enable(): pooled enemies are reused many times
         const health = this.getComponent(Health);
         health?.on(Health.CHANGE_EVENT, () => {
+            const dmgTaken = Math.max(1, this._lastRecordedHp - health.current);
+            this._lastRecordedHp = health.current;
+
+            if (this.active && health.max > 1) {
+                this.showDamagePopup(dmgTaken);
+            }
+
             this._isHitFlashing = true;
             this.setTintFill(0xffffff);
             this.updateHpBar(health.current, health.max);
+
+            if (this.isBoss) {
+                this.emitBossStatus(health.current > 0, health.current, health.max);
+            }
 
             if (health.current === 0) {
                 this.disableBody();
@@ -138,7 +155,7 @@ export default class Enemy extends Entity {
         this.applyBaseTint();
 
         this.enableBody(true, x, y, true, true);
-        this.setDepth(8);
+        this.setDepth(this.isBoss ? 9 : 8);
 
         const bodyRadius = Math.min(this.width, this.height) * 0.42;
         this.arcadeBody.setCircle(
@@ -149,14 +166,20 @@ export default class Enemy extends Entity {
 
         // Smooth, progressive difficulty scaling based on player level
         const levelOffset = Math.max(0, playerLevel - 1);
-        const hpScale = 1 + levelOffset * 0.22;
+        const hpScale = this.isBoss ? (1 + levelOffset * 0.16) : (1 + levelOffset * 0.22);
         const speedScale = 1 + Math.min(0.45, levelOffset * 0.045);
         const damageBonus = Math.min(14, Math.floor(levelOffset * 1.5));
         const fireCooldownScale = Math.max(0.75, Math.pow(0.97, levelOffset));
 
         const baseHealth = data?.health ?? 1;
         const scaledHealth = Math.max(1, Math.round(baseHealth * hpScale));
-        this.getComponent(Health)?.setMax(scaledHealth, true);
+        const health = this.getComponent(Health);
+        health?.setMax(scaledHealth, true);
+        this._lastRecordedHp = scaledHealth;
+
+        if (this.isBoss) {
+            this.emitBossStatus(true, scaledHealth, scaledHealth);
+        }
 
         this.getComponent(Movement)?.setSpeed((data?.movementSpeed ?? 0.16) * speedScale);
 
@@ -182,17 +205,57 @@ export default class Enemy extends Entity {
     }
 
     public disable() {
+        const wasBoss = this.isBoss;
         this.stop();
         this.removeAllListeners(Phaser.Animations.Events.ANIMATION_COMPLETE);
         this.hideHpBar();
 
         this.disableBody(true, true);
         this._shootTimer.paused = true;
+
+        if (wasBoss) {
+            this.emitBossStatus(false, 0, 1);
+        }
+    }
+
+    private showDamagePopup(amount: number) {
+        const txt = this.scene.add.text(
+            this.x + Phaser.Math.Between(-16, 16),
+            this.y - this.displayHeight * 0.45,
+            `-${amount}`,
+            {
+                fontSize: amount >= 3 ? '26px' : '20px',
+                fontFamily: 'future, sans-serif',
+                color: amount >= 3 ? '#fde047' : '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4,
+            }
+        ).setOrigin(0.5).setDepth(22);
+
+        this.scene.tweens.add({
+            targets: txt,
+            y: txt.y - 38,
+            alpha: 0,
+            duration: 450,
+            ease: 'Quad.easeOut',
+            onComplete: () => txt.destroy(),
+        });
+    }
+
+    private emitBossStatus(active: boolean, current: number, max: number) {
+        this.scene.game.events.emit(GameConstants.Events.BOSS_STATUS_EVENT, {
+            active,
+            name: this._enemyData?.name ?? 'BOSS',
+            current,
+            max,
+            x: this.x,
+            y: this.y,
+        });
     }
 
     private updateHpBar(current: number, max: number) {
         if (!this._hpBarBg || !this._hpBarFill) return;
-        if (max <= 1 || current <= 0 || current >= max) {
+        if (this.isBoss || max <= 1 || current <= 0 || current >= max) {
             this.hideHpBar();
             return;
         }

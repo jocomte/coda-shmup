@@ -8,6 +8,8 @@ export type EnemyBulletConfig = {
 };
 
 export type EnemyTypeData = {
+    name?: string;
+    isBoss?: boolean;
     texture: string;
     tint: number | string | null;
     scale: number;

@@ -1,6 +1,12 @@
 {
   "1": {
+    "name": "INTERCEPTOR MK-I",
+    "description": "Équilibré  •  100 PV  •  Polyvalent",
     "movementSpeed": 0.6,
+    "maxHealth": 100,
+    "rateOfFire": 0.32,
+    "baseDamage": 1,
+    "dashCooldownMs": 2200,
     "texture": "playerShip1_blue",
     "body": {
       "radius": 42,
@@ -9,7 +15,13 @@
     }
   },
   "2": {
-    "movementSpeed": 0.9,
+    "name": "VIPER MK-II",
+    "description": "Assaut Lourd  •  135 PV  •  Dégâts x2",
+    "movementSpeed": 0.54,
+    "maxHealth": 135,
+    "rateOfFire": 0.36,
+    "baseDamage": 2,
+    "dashCooldownMs": 2500,
     "texture": "playerShip2_blue",
     "body": {
       "radius": 42,
@@ -18,7 +30,13 @@
     }
   },
   "3": {
-    "movementSpeed": 1.2,
+    "name": "PHANTOM MK-III",
+    "description": "Chasseur Agile  •  80 PV  •  Tir & Dash Rapides",
+    "movementSpeed": 0.74,
+    "maxHealth": 80,
+    "rateOfFire": 0.25,
+    "baseDamage": 1,
+    "dashCooldownMs": 1550,
     "texture": "playerShip3_blue",
     "body": {
       "radius": 42,

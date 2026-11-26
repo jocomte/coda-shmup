@@ -31,6 +31,7 @@ export default class MainGameScene extends Scene {
         this.audioManager?.initSettingsFromSave();
         this.audioManager?.ensureMusicStarted();
 
+        this.input.mouse?.disableContextMenu();
         this._gamepadTracker.reset(this);
 
         const mapWidth = GameConstants.MAP_WIDTH;
