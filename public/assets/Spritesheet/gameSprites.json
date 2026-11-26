@@ -4,11 +4,53 @@
 			"image": "gameSprites.png",
 			"format": "RGBA8888",
 			"size": {
-				"w": 532,
+				"w": 700,
 				"h": 1020
 			},
 			"scale": 1,
 			"frames": [
+				{
+					"filename": "enemyBossSolar",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 148,
+						"h": 148
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 148,
+						"h": 148
+					},
+					"frame": {
+						"x": 2,
+						"y": 2,
+						"w": 148,
+						"h": 148
+					}
+				},
+				{
+					"filename": "enemyBossVoid",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 148,
+						"h": 148
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 148,
+						"h": 148
+					},
+					"frame": {
+						"x": 2,
+						"y": 154,
+						"w": 148,
+						"h": 148
+					}
+				},
 				{
 					"filename": "enemyBoss",
 					"rotated": false,
@@ -25,7 +67,28 @@
 					},
 					"frame": {
 						"x": 2,
-						"y": 2,
+						"y": 306,
+						"w": 144,
+						"h": 144
+					}
+				},
+				{
+					"filename": "enemyBossCryo",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 144,
+						"h": 144
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 144,
+						"h": 144
+					},
+					"frame": {
+						"x": 2,
+						"y": 454,
 						"w": 144,
 						"h": 144
 					}
@@ -46,7 +109,7 @@
 					},
 					"frame": {
 						"x": 2,
-						"y": 150,
+						"y": 602,
 						"w": 132,
 						"h": 132
 					}
@@ -67,7 +130,7 @@
 					},
 					"frame": {
 						"x": 2,
-						"y": 286,
+						"y": 738,
 						"w": 120,
 						"h": 120
 					}
@@ -88,240 +151,9 @@
 					},
 					"frame": {
 						"x": 2,
-						"y": 410,
+						"y": 862,
 						"w": 120,
 						"h": 120
-					}
-				},
-				{
-					"filename": "shipUpgrade_heavyCannons",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 120,
-						"h": 120
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 120,
-						"h": 120
-					},
-					"frame": {
-						"x": 2,
-						"y": 534,
-						"w": 120,
-						"h": 120
-					}
-				},
-				{
-					"filename": "shipUpgrade_shield",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 120,
-						"h": 120
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 120,
-						"h": 120
-					},
-					"frame": {
-						"x": 2,
-						"y": 658,
-						"w": 120,
-						"h": 120
-					}
-				},
-				{
-					"filename": "shipUpgrade_thrusters",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 120,
-						"h": 120
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 120,
-						"h": 120
-					},
-					"frame": {
-						"x": 2,
-						"y": 782,
-						"w": 120,
-						"h": 120
-					}
-				},
-				{
-					"filename": "playerShip2_blue",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 75,
-						"h": 112
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 75,
-						"h": 112
-					},
-					"frame": {
-						"x": 2,
-						"y": 906,
-						"w": 75,
-						"h": 112
-					}
-				},
-				{
-					"filename": "enemyHeavy",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 108,
-						"h": 108
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 108,
-						"h": 108
-					},
-					"frame": {
-						"x": 81,
-						"y": 906,
-						"w": 108,
-						"h": 108
-					}
-				},
-				{
-					"filename": "playerShip1_blue",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 75,
-						"h": 99
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 75,
-						"h": 99
-					},
-					"frame": {
-						"x": 193,
-						"y": 906,
-						"w": 75,
-						"h": 99
-					}
-				},
-				{
-					"filename": "playerShip3_blue",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 75,
-						"h": 98
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 75,
-						"h": 98
-					},
-					"frame": {
-						"x": 272,
-						"y": 906,
-						"w": 75,
-						"h": 98
-					}
-				},
-				{
-					"filename": "enemyInterceptor",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 84,
-						"h": 92
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 84,
-						"h": 92
-					},
-					"frame": {
-						"x": 351,
-						"y": 906,
-						"w": 84,
-						"h": 92
-					}
-				},
-				{
-					"filename": "bullet_player",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 36,
-						"h": 16
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 36,
-						"h": 16
-					},
-					"frame": {
-						"x": 351,
-						"y": 1002,
-						"w": 36,
-						"h": 16
-					}
-				},
-				{
-					"filename": "ufoRed-shoot0",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 91,
-						"h": 91
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 91,
-						"h": 91
-					},
-					"frame": {
-						"x": 439,
-						"y": 286,
-						"w": 91,
-						"h": 91
-					}
-				},
-				{
-					"filename": "ufoRed-shoot1",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 91,
-						"h": 91
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 91,
-						"h": 91
-					},
-					"frame": {
-						"x": 138,
-						"y": 150,
-						"w": 91,
-						"h": 91
 					}
 				},
 				{
@@ -339,8 +171,8 @@
 						"h": 32
 					},
 					"frame": {
-						"x": 138,
-						"y": 245,
+						"x": 2,
+						"y": 986,
 						"w": 32,
 						"h": 32
 					}
@@ -360,8 +192,8 @@
 						"h": 28
 					},
 					"frame": {
-						"x": 174,
-						"y": 245,
+						"x": 38,
+						"y": 986,
 						"w": 28,
 						"h": 28
 					}
@@ -381,8 +213,8 @@
 						"h": 26
 					},
 					"frame": {
-						"x": 206,
-						"y": 245,
+						"x": 70,
+						"y": 986,
 						"w": 33,
 						"h": 26
 					}
@@ -402,8 +234,8 @@
 						"h": 24
 					},
 					"frame": {
-						"x": 243,
-						"y": 245,
+						"x": 107,
+						"y": 986,
 						"w": 25,
 						"h": 24
 					}
@@ -423,115 +255,73 @@
 						"h": 24
 					},
 					"frame": {
-						"x": 272,
-						"y": 245,
+						"x": 136,
+						"y": 986,
 						"w": 25,
 						"h": 24
 					}
 				},
 				{
-					"filename": "ufoRed",
+					"filename": "shipUpgrade_heavyCannons",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
-						"w": 91,
-						"h": 91
+						"w": 120,
+						"h": 120
 					},
 					"spriteSourceSize": {
 						"x": 0,
 						"y": 0,
-						"w": 91,
-						"h": 91
+						"w": 120,
+						"h": 120
 					},
 					"frame": {
-						"x": 301,
-						"y": 2,
-						"w": 91,
-						"h": 91
+						"x": 126,
+						"y": 738,
+						"w": 120,
+						"h": 120
 					}
 				},
 				{
-					"filename": "icon_bulletspeed",
+					"filename": "shipUpgrade_shield",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
-						"w": 64,
-						"h": 64
+						"w": 120,
+						"h": 120
 					},
 					"spriteSourceSize": {
 						"x": 0,
 						"y": 0,
-						"w": 64,
-						"h": 64
+						"w": 120,
+						"h": 120
 					},
 					"frame": {
-						"x": 233,
-						"y": 2,
-						"w": 64,
-						"h": 64
+						"x": 126,
+						"y": 862,
+						"w": 120,
+						"h": 120
 					}
 				},
 				{
-					"filename": "icon_damage",
+					"filename": "shipUpgrade_thrusters",
 					"rotated": false,
 					"trimmed": false,
 					"sourceSize": {
-						"w": 64,
-						"h": 64
+						"w": 120,
+						"h": 120
 					},
 					"spriteSourceSize": {
 						"x": 0,
 						"y": 0,
-						"w": 64,
-						"h": 64
+						"w": 120,
+						"h": 120
 					},
 					"frame": {
-						"x": 233,
-						"y": 70,
-						"w": 64,
-						"h": 64
-					}
-				},
-				{
-					"filename": "icon_dash",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 64,
-						"h": 64
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 64,
-						"h": 64
-					},
-					"frame": {
-						"x": 150,
-						"y": 2,
-						"w": 64,
-						"h": 64
-					}
-				},
-				{
-					"filename": "icon_firerate",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 64,
-						"h": 64
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 64,
-						"h": 64
-					},
-					"frame": {
-						"x": 150,
-						"y": 70,
-						"w": 64,
-						"h": 64
+						"x": 250,
+						"y": 862,
+						"w": 120,
+						"h": 120
 					}
 				},
 				{
@@ -549,8 +339,8 @@
 						"h": 24
 					},
 					"frame": {
-						"x": 396,
-						"y": 2,
+						"x": 165,
+						"y": 986,
 						"w": 24,
 						"h": 24
 					}
@@ -570,8 +360,8 @@
 						"h": 24
 					},
 					"frame": {
-						"x": 396,
-						"y": 30,
+						"x": 193,
+						"y": 986,
 						"w": 24,
 						"h": 24
 					}
@@ -591,31 +381,10 @@
 						"h": 24
 					},
 					"frame": {
-						"x": 396,
-						"y": 58,
+						"x": 221,
+						"y": 986,
 						"w": 24,
 						"h": 24
-					}
-				},
-				{
-					"filename": "icon_heal",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 64,
-						"h": 64
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 64,
-						"h": 64
-					},
-					"frame": {
-						"x": 233,
-						"y": 138,
-						"w": 64,
-						"h": 64
 					}
 				},
 				{
@@ -633,10 +402,430 @@
 						"h": 22
 					},
 					"frame": {
-						"x": 233,
-						"y": 206,
+						"x": 249,
+						"y": 986,
 						"w": 44,
 						"h": 22
+					}
+				},
+				{
+					"filename": "bullet_player",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 36,
+						"h": 16
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 36,
+						"h": 16
+					},
+					"frame": {
+						"x": 297,
+						"y": 986,
+						"w": 36,
+						"h": 16
+					}
+				},
+				{
+					"filename": "playerShip2_blue",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 75,
+						"h": 112
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 75,
+						"h": 112
+					},
+					"frame": {
+						"x": 138,
+						"y": 602,
+						"w": 75,
+						"h": 112
+					}
+				},
+				{
+					"filename": "enemyHeavy",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 108,
+						"h": 108
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 108,
+						"h": 108
+					},
+					"frame": {
+						"x": 217,
+						"y": 602,
+						"w": 108,
+						"h": 108
+					}
+				},
+				{
+					"filename": "playerShip1_blue",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 75,
+						"h": 99
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 75,
+						"h": 99
+					},
+					"frame": {
+						"x": 250,
+						"y": 714,
+						"w": 75,
+						"h": 99
+					}
+				},
+				{
+					"filename": "expGem_large",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 40,
+						"h": 40
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 40,
+						"h": 40
+					},
+					"frame": {
+						"x": 250,
+						"y": 817,
+						"w": 40,
+						"h": 40
+					}
+				},
+				{
+					"filename": "enemyMagma",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 98,
+						"h": 98
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 98,
+						"h": 98
+					},
+					"frame": {
+						"x": 150,
+						"y": 306,
+						"w": 98,
+						"h": 98
+					}
+				},
+				{
+					"filename": "playerShip3_blue",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 75,
+						"h": 98
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 75,
+						"h": 98
+					},
+					"frame": {
+						"x": 150,
+						"y": 408,
+						"w": 75,
+						"h": 98
+					}
+				},
+				{
+					"filename": "enemyCryo",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 84,
+						"h": 84
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 84,
+						"h": 84
+					},
+					"frame": {
+						"x": 150,
+						"y": 510,
+						"w": 84,
+						"h": 84
+					}
+				},
+				{
+					"filename": "enemyPrism",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 96,
+						"h": 96
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 96,
+						"h": 96
+					},
+					"frame": {
+						"x": 229,
+						"y": 408,
+						"w": 96,
+						"h": 96
+					}
+				},
+				{
+					"filename": "enemyVoid",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 88,
+						"h": 90
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 88,
+						"h": 90
+					},
+					"frame": {
+						"x": 238,
+						"y": 508,
+						"w": 88,
+						"h": 90
+					}
+				},
+				{
+					"filename": "icon_bulletspeed",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 64,
+						"h": 64
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 64,
+						"h": 64
+					},
+					"frame": {
+						"x": 330,
+						"y": 508,
+						"w": 64,
+						"h": 64
+					}
+				},
+				{
+					"filename": "enemySolar",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 88,
+						"h": 92
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 88,
+						"h": 92
+					},
+					"frame": {
+						"x": 329,
+						"y": 602,
+						"w": 88,
+						"h": 92
+					}
+				},
+				{
+					"filename": "enemyInterceptor",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 84,
+						"h": 92
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 84,
+						"h": 92
+					},
+					"frame": {
+						"x": 329,
+						"y": 698,
+						"w": 84,
+						"h": 92
+					}
+				},
+				{
+					"filename": "icon_damage",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 64,
+						"h": 64
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 64,
+						"h": 64
+					},
+					"frame": {
+						"x": 329,
+						"y": 794,
+						"w": 64,
+						"h": 64
+					}
+				},
+				{
+					"filename": "icon_dash",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 64,
+						"h": 64
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 64,
+						"h": 64
+					},
+					"frame": {
+						"x": 397,
+						"y": 794,
+						"w": 64,
+						"h": 64
+					}
+				},
+				{
+					"filename": "icon_firerate",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 64,
+						"h": 64
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 64,
+						"h": 64
+					},
+					"frame": {
+						"x": 465,
+						"y": 794,
+						"w": 64,
+						"h": 64
+					}
+				},
+				{
+					"filename": "ufoRed-shoot0",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 91,
+						"h": 91
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 91,
+						"h": 91
+					},
+					"frame": {
+						"x": 417,
+						"y": 698,
+						"w": 91,
+						"h": 91
+					}
+				},
+				{
+					"filename": "ufoRed-shoot1",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 91,
+						"h": 91
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 91,
+						"h": 91
+					},
+					"frame": {
+						"x": 512,
+						"y": 698,
+						"w": 91,
+						"h": 91
+					}
+				},
+				{
+					"filename": "ufoRed",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 91,
+						"h": 91
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 91,
+						"h": 91
+					},
+					"frame": {
+						"x": 607,
+						"y": 698,
+						"w": 91,
+						"h": 91
+					}
+				},
+				{
+					"filename": "icon_heal",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 64,
+						"h": 64
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 64,
+						"h": 64
+					},
+					"frame": {
+						"x": 374,
+						"y": 862,
+						"w": 64,
+						"h": 64
 					}
 				},
 				{
@@ -654,8 +843,8 @@
 						"h": 64
 					},
 					"frame": {
-						"x": 301,
-						"y": 97,
+						"x": 374,
+						"y": 930,
 						"w": 64,
 						"h": 64
 					}
@@ -675,8 +864,8 @@
 						"h": 64
 					},
 					"frame": {
-						"x": 369,
-						"y": 97,
+						"x": 442,
+						"y": 862,
 						"w": 64,
 						"h": 64
 					}
@@ -696,8 +885,8 @@
 						"h": 64
 					},
 					"frame": {
-						"x": 424,
-						"y": 2,
+						"x": 442,
+						"y": 930,
 						"w": 64,
 						"h": 64
 					}
@@ -717,8 +906,8 @@
 						"h": 64
 					},
 					"frame": {
-						"x": 301,
-						"y": 165,
+						"x": 510,
+						"y": 862,
 						"w": 64,
 						"h": 64
 					}
@@ -738,31 +927,10 @@
 						"h": 64
 					},
 					"frame": {
-						"x": 369,
-						"y": 165,
+						"x": 533,
+						"y": 793,
 						"w": 64,
 						"h": 64
-					}
-				},
-				{
-					"filename": "expGem_large",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 40,
-						"h": 40
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 40,
-						"h": 40
-					},
-					"frame": {
-						"x": 301,
-						"y": 233,
-						"w": 40,
-						"h": 40
 					}
 				}
 			]

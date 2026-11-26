@@ -7,6 +7,7 @@ import Player, {
     type ExpStatus,
     type OverdriveStatus,
 } from "../entities/Player.ts";
+import { getMapZoneForSector, type MapZoneConfig } from "../gameData/MapZonesData.ts";
 import AudioManager from "../managers/AudioManager.ts";
 import GameConstants from "../GameConstants.ts";
 import RegistryConstants from "../RegistryConstants.ts";
@@ -24,6 +25,12 @@ type BossStatus = {
     name: string;
     current: number;
     max: number;
+};
+
+type SectorChangedPayload = {
+    sectorNumber: number;
+    zone: MapZoneConfig;
+    isWarp?: boolean;
 };
 
 export default class MainUIScene extends Scene {
@@ -58,6 +65,8 @@ export default class MainUIScene extends Scene {
     private _powerUpsText!: GameObjects.Text;
     private _muteBtnText!: GameObjects.Text;
     private _gamepadBadge!: GameObjects.Text;
+    private _sectorBadgeBg!: GameObjects.Rectangle;
+    private _sectorBadgeText!: GameObjects.Text;
     private _radarGraphics!: GameObjects.Graphics;
     private _radarOriginX: number = 0;
     private _radarOriginY: number = 0;
@@ -78,6 +87,7 @@ export default class MainUIScene extends Scene {
         this.game.events.on(GameConstants.Events.COMBO_CHANGED_EVENT, this.onComboChanged, this);
         this.game.events.on(GameConstants.Events.BOSS_STATUS_EVENT, this.onBossStatus, this);
         this.game.events.on(GameConstants.Events.BOSS_ALERT_EVENT, this.onBossAlert, this);
+        this.game.events.on(GameConstants.Events.SECTOR_CHANGED_EVENT, this.onSectorChanged, this);
         this.registry.events.on(RegistryConstants.Events.PLAYER_SCORE_CHANGE, this.onPlayerScoreChanged, this);
 
         this.events.once(Scenes.Events.SHUTDOWN, () => {
@@ -91,6 +101,7 @@ export default class MainUIScene extends Scene {
             this.game.events.off(GameConstants.Events.COMBO_CHANGED_EVENT, this.onComboChanged, this);
             this.game.events.off(GameConstants.Events.BOSS_STATUS_EVENT, this.onBossStatus, this);
             this.game.events.off(GameConstants.Events.BOSS_ALERT_EVENT, this.onBossAlert, this);
+            this.game.events.off(GameConstants.Events.SECTOR_CHANGED_EVENT, this.onSectorChanged, this);
             this.registry.events.off(RegistryConstants.Events.PLAYER_SCORE_CHANGE, this.onPlayerScoreChanged, this);
         }, this);
     }
@@ -305,6 +316,23 @@ export default class MainUIScene extends Scene {
             strokeThickness: 4,
         }).setOrigin(0, 1).setVisible(false);
 
+        // Current Sector badge (bottom-center)
+        const initialZone = getMapZoneForSector(1);
+        this._sectorBadgeBg = this.add.rectangle(this.scale.width / 2, this.scale.height - 54, 460, 44, 0x0f172a, 0.84)
+            .setStrokeStyle(2, initialZone.borderInnerColor, 0.85);
+        this._sectorBadgeText = this.add.text(
+            this.scale.width / 2,
+            this.scale.height - 54,
+            `SECTEUR 1 : ${initialZone.name}`,
+            {
+                fontSize: '18px',
+                fontFamily: 'future, sans-serif',
+                color: initialZone.accentHex,
+                stroke: '#000000',
+                strokeThickness: 4,
+            }
+        ).setOrigin(0.5);
+
         this.scene.bringToTop();
 
         console.log("MainUIScene created");
@@ -392,6 +420,58 @@ export default class MainUIScene extends Scene {
             onComplete: () => {
                 alertBg.destroy();
                 alertTxt.destroy();
+            },
+        });
+    }
+
+    private onSectorChanged(payload: SectorChangedPayload) {
+        const { sectorNumber, zone, isWarp } = payload;
+        if (this._sectorBadgeBg) {
+            this._sectorBadgeBg.setStrokeStyle(2, zone.borderInnerColor, 0.85);
+        }
+        if (this._sectorBadgeText) {
+            this._sectorBadgeText.setText(`SECTEUR ${sectorNumber} : ${zone.name}`);
+            this._sectorBadgeText.setColor(zone.accentHex);
+        }
+
+        if (!isWarp) return;
+
+        const bannerBg = this.add.rectangle(this.scale.width / 2, 360, 880, 124, 0x0f172a, 0.94)
+            .setStrokeStyle(4, zone.borderInnerColor, 1);
+        const bannerTitle = this.add.text(
+            this.scale.width / 2,
+            340,
+            `WARP → SECTEUR ${sectorNumber} : ${zone.name}`,
+            {
+                fontSize: '30px',
+                fontFamily: 'future, sans-serif',
+                color: zone.accentHex,
+                stroke: '#000000',
+                strokeThickness: 6,
+            }
+        ).setOrigin(0.5);
+        const bannerSub = this.add.text(
+            this.scale.width / 2,
+            386,
+            `${zone.subtitle}  •  +20 HP RESTAURÉS`,
+            {
+                fontSize: '20px',
+                fontFamily: 'future, sans-serif',
+                color: '#e2e8f0',
+                stroke: '#000000',
+                strokeThickness: 4,
+            }
+        ).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: [bannerBg, bannerTitle, bannerSub],
+            alpha: 0,
+            delay: 2000,
+            duration: 550,
+            onComplete: () => {
+                bannerBg.destroy();
+                bannerTitle.destroy();
+                bannerSub.destroy();
             },
         });
     }

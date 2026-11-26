@@ -6,6 +6,7 @@ import ExpGem from "../entities/ExpGem.ts";
 import Player from "../entities/Player.ts";
 import PowerUp from "../entities/PowerUp.ts";
 import type { EnemiesData, EnemyTypeData } from "../gameData/EnemiesData.ts";
+import { getMapZoneForSector } from "../gameData/MapZonesData.ts";
 import { PowerUpType } from "../gameData/PowerUpData.ts";
 import AudioManager from "../managers/AudioManager.ts";
 import GroupUtils from "../utils/GroupUtils.ts";
@@ -32,9 +33,14 @@ export default class EntityManager extends Plugins.ScenePlugin {
     private _enemyBullets: Physics.Arcade.Group;
     private _powerUps: Physics.Arcade.Group;
     private _expGems: Physics.Arcade.Group;
+    private static readonly KILLS_PER_SECTOR_BOSS: number = 14;
+
     private _enemiesData: EnemiesData;
     private _spawnTimer?: Phaser.Time.TimerEvent;
     private _lastBossLevelSpawned: number = 0;
+    private _sectorNumber: number = 1;
+    private _sectorKills: number = 0;
+    private _sectorTransitionPending: boolean = false;
     private readonly _grazedBullets: WeakSet<Bullet> = new WeakSet();
 
     constructor(scene: Scene, pluginManager: Plugins.PluginManager) {
@@ -51,6 +57,9 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
     public initAndSpawnPlayer(): Player {
         this._lastBossLevelSpawned = 0;
+        this._sectorNumber = 1;
+        this._sectorKills = 0;
+        this._sectorTransitionPending = false;
 
         this._playerBullets = this.scene!.physics.add.group(this.bulletGroupConfig);
         GroupUtils.populate(128, this._playerBullets);
@@ -135,12 +144,19 @@ export default class EntityManager extends Plugins.ScenePlugin {
             loop: true
         });
 
-        // Timed Boss wave every 60s if no boss is active
+        // Timed Boss wave every 50s if no boss is active
         this.scene!.time.addEvent({
-            delay: 60000,
+            delay: 50000,
             callback: this.trySpawnBoss,
             callbackScope: this,
             loop: true
+        });
+
+        const initialZone = getMapZoneForSector(this._sectorNumber);
+        this.game!.events.emit(GameConstants.Events.SECTOR_CHANGED_EVENT, {
+            sectorNumber: this._sectorNumber,
+            zone: initialZone,
+            isWarp: false,
         });
 
         // Gentle initial wave so player can get their bearings
@@ -232,14 +248,63 @@ export default class EntityManager extends Plugins.ScenePlugin {
                 );
             }
             this.spawnPowerUpAt(enemy.x, enemy.y);
+
+            if (!this._sectorTransitionPending) {
+                this._sectorTransitionPending = true;
+                this.scene?.time.delayedCall(1400, () => this.advanceToNextSector());
+            }
             return;
         }
 
+        this._sectorKills++;
         this.spawnExpGemAt(enemy.x, enemy.y, enemy.expValue);
 
         if (Math.random() <= enemy.dropChance) {
             this.spawnPowerUpAt(enemy.x, enemy.y);
         }
+
+        if (
+            !this._sectorTransitionPending &&
+            this._sectorKills >= EntityManager.KILLS_PER_SECTOR_BOSS &&
+            !this.hasActiveBoss()
+        ) {
+            this.trySpawnBoss();
+        }
+    }
+
+    private advanceToNextSector() {
+        if (!this._player || !this._player.active || !this.scene) return;
+
+        this._sectorNumber++;
+        this._sectorKills = 0;
+        this._sectorTransitionPending = false;
+
+        for (const obj of this._enemies?.getChildren() ?? []) {
+            const e = obj as Enemy;
+            if (e.active) e.disable();
+        }
+        for (const obj of this._enemyBullets?.getChildren() ?? []) {
+            const b = obj as Bullet;
+            if (b.active) b.disable();
+        }
+
+        this._player.getComponent(Health)?.heal(20);
+
+        const newZone = getMapZoneForSector(this._sectorNumber);
+        this.game?.events.emit(GameConstants.Events.SECTOR_CHANGED_EVENT, {
+            sectorNumber: this._sectorNumber,
+            zone: newZone,
+            isWarp: true,
+        });
+
+        const audio = this.game?.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager | undefined;
+        audio?.playSfx('sfx_overdrive', 0.9);
+
+        this.scene.time.delayedCall(650, () => {
+            for (let i = 0; i < 2; i++) {
+                this.spawnEnemy();
+            }
+        });
     }
 
     private spawnExpGemAt(x: number, y: number, expValue: number) {
@@ -278,6 +343,8 @@ export default class EntityManager extends Plugins.ScenePlugin {
     }
 
     private onSpawnTick() {
+        if (this._sectorTransitionPending) return;
+
         const currentScore = Number(this.scene!.registry.get(RegistryConstants.Keys.PLAYER_SCORE) ?? 0);
         const playerLevel = this._player?.level ?? 1;
 
@@ -306,15 +373,18 @@ export default class EntityManager extends Plugins.ScenePlugin {
     }
 
     private trySpawnBoss() {
-        if (!this._player || !this._player.active || this.hasActiveBoss()) return;
-        const bossData = this._enemiesData?.['boss'];
+        if (!this._player || !this._player.active || this._sectorTransitionPending || this.hasActiveBoss()) return;
+
+        const zone = getMapZoneForSector(this._sectorNumber);
+        const bossData = this._enemiesData?.[zone.bossKey] ?? this._enemiesData?.['boss'];
         if (!bossData) return;
 
         const boss = this._enemies.get() as Enemy;
         if (!boss) return;
 
         const pos = this.getSpawnPositionAroundPlayer();
-        boss.enable(pos.x, pos.y, bossData, this._player.level);
+        const bossScaleLevel = Math.max(this._player.level, (this._sectorNumber - 1) * 2 + 1);
+        boss.enable(pos.x, pos.y, bossData, bossScaleLevel);
 
         const audio = this.game!.plugins.get(AudioManager.PLUGIN_KEY) as AudioManager | undefined;
         audio?.playSfx('sfx_boss_alert', 0.85);
@@ -382,18 +452,27 @@ export default class EntityManager extends Plugins.ScenePlugin {
     private pickEnemyType(currentScore: number, playerLevel: number): EnemyTypeData | undefined {
         if (!this._enemiesData) return undefined;
 
-        const eligible: EnemyTypeData[] = Object.values(this._enemiesData).filter(
-            entry => !entry.isBoss && entry.spawnWeight > 0 &&
-                (currentScore >= entry.minScoreToSpawn || playerLevel >= entry.minLevelToSpawn)
+        const zone = getMapZoneForSector(this._sectorNumber);
+        const sectorPool: EnemyTypeData[] = zone.enemyKeys
+            .map(key => this._enemiesData[key])
+            .filter((entry): entry is EnemyTypeData => Boolean(entry && !entry.isBoss && entry.spawnWeight > 0));
+
+        const fallbackPool = sectorPool.length > 0
+            ? sectorPool
+            : Object.values(this._enemiesData).filter(entry => !entry.isBoss && entry.spawnWeight > 0);
+
+        const gated = fallbackPool.filter(
+            entry => this._sectorNumber > 1 || currentScore >= entry.minScoreToSpawn || playerLevel >= entry.minLevelToSpawn
         );
+        const eligible = gated.length > 0 ? gated : fallbackPool;
 
         if (eligible.length === 0) return undefined;
 
-        // Higher level gradually shifts weight toward stronger enemies
+        // Higher level/sector gradually shifts weight toward stronger enemies
         const weighted = eligible.map(entry => ({
             entry,
             weight: entry.scoreValue > 1
-                ? entry.spawnWeight + Math.max(0, playerLevel - 1) * 6
+                ? entry.spawnWeight + Math.max(0, playerLevel - 1 + (this._sectorNumber - 1) * 2) * 5
                 : entry.spawnWeight,
         }));
 
@@ -475,8 +554,9 @@ export default class EntityManager extends Plugins.ScenePlugin {
 
         const enemyData = this.pickEnemyType(currentScore, playerLevel);
         const pos = this.getSpawnPositionAroundPlayer();
+        const effectiveLevel = Math.max(playerLevel, this._sectorNumber);
 
-        enemy.enable(pos.x, pos.y, enemyData, playerLevel);
+        enemy.enable(pos.x, pos.y, enemyData, effectiveLevel);
 
         this.game!.events.emit(GameConstants.Events.ENEMY_SPAWNED_EVENT, enemy);
     }

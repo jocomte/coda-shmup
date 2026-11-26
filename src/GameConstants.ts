@@ -13,6 +13,7 @@ export default class GameConstants {
         COMBO_CHANGED_EVENT: "comboChanged",
         BOSS_STATUS_EVENT: "bossStatus",
         BOSS_ALERT_EVENT: "bossAlert",
+        SECTOR_CHANGED_EVENT: "sectorChanged",
     } as const);
 
     public static readonly SceneKeys = Object.freeze({
