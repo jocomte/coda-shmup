@@ -1,35 +1,53 @@
-import { Input, Scene } from 'phaser';
+import { Scene } from 'phaser';
 
-export function getActiveGamepad(scene: Scene): Input.Gamepad.Gamepad | null {
-    const plugin = scene.input?.gamepad;
-    if (!plugin || plugin.total === 0) return null;
+export function getRawActiveGamepad(): Gamepad | null {
+    try {
+        if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
+            return null;
+        }
 
-    if (plugin.pad1 && plugin.pad1.connected) {
-        return plugin.pad1;
+        const pads = navigator.getGamepads();
+        if (!pads) return null;
+
+        for (let i = 0; i < pads.length; i++) {
+            const pad = pads[i];
+            if (pad && pad.connected) {
+                return pad;
+            }
+        }
+    } catch {
+        return null;
     }
 
-    for (const pad of plugin.gamepads) {
-        if (pad && pad.connected) return pad;
-    }
     return null;
 }
 
-export function readGamepadMove(scene: Scene, out: Phaser.Math.Vector2, deadzone: number = 0.18): boolean {
-    const pad = getActiveGamepad(scene);
+export function isGamepadConnected(_scene?: Scene): boolean {
+    return getRawActiveGamepad() !== null;
+}
+
+export function readGamepadMove(_scene: Scene, out: Phaser.Math.Vector2, deadzone: number = 0.18): boolean {
+    const pad = getRawActiveGamepad();
     if (!pad) return false;
 
     let gx = 0;
     let gy = 0;
 
-    if (pad.leftStick) {
-        if (Math.abs(pad.leftStick.x) > deadzone) gx = pad.leftStick.x;
-        if (Math.abs(pad.leftStick.y) > deadzone) gy = pad.leftStick.y;
+    const axes = pad.axes;
+    if (axes && axes.length >= 2) {
+        const ax = axes[0] ?? 0;
+        const ay = axes[1] ?? 0;
+        if (Math.abs(ax) > deadzone) gx = ax;
+        if (Math.abs(ay) > deadzone) gy = ay;
     }
 
-    if (pad.left) gx = -1;
-    if (pad.right) gx = 1;
-    if (pad.up) gy = -1;
-    if (pad.down) gy = 1;
+    const buttons = pad.buttons;
+    if (buttons) {
+        if (buttons[14]?.pressed) gx = -1;
+        if (buttons[15]?.pressed) gx = 1;
+        if (buttons[12]?.pressed) gy = -1;
+        if (buttons[13]?.pressed) gy = 1;
+    }
 
     if (gx === 0 && gy === 0) return false;
 
@@ -40,22 +58,32 @@ export function readGamepadMove(scene: Scene, out: Phaser.Math.Vector2, deadzone
     return true;
 }
 
-export function readGamepadRightStick(scene: Scene, out: Phaser.Math.Vector2, deadzone: number = 0.35): boolean {
-    const pad = getActiveGamepad(scene);
-    if (!pad || !pad.rightStick) return false;
+export function readGamepadRightStick(_scene: Scene, out: Phaser.Math.Vector2, deadzone: number = 0.35): boolean {
+    const pad = getRawActiveGamepad();
+    if (!pad || !pad.axes || pad.axes.length < 4) return false;
 
-    const rx = pad.rightStick.x;
-    const ry = pad.rightStick.y;
+    const rx = pad.axes[2] ?? 0;
+    const ry = pad.axes[3] ?? 0;
     if (rx * rx + ry * ry <= deadzone * deadzone) return false;
 
     out.set(rx, ry).normalize();
     return true;
 }
 
+export function isGamepadFireHeld(): boolean {
+    const pad = getRawActiveGamepad();
+    if (!pad || !pad.buttons) return false;
+    return Boolean(
+        pad.buttons[0]?.pressed ||
+        (pad.buttons[7]?.value ?? 0) > 0.3 ||
+        pad.buttons[7]?.pressed
+    );
+}
+
 export type GamepadNavAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause';
 
 /**
- * Edge-triggered gamepad state tracker for menus and pause toggles.
+ * Edge-triggered gamepad state tracker reading browser Gamepad API directly.
  */
 export class GamepadEdgeTracker {
     private readonly _prev: Record<GamepadNavAction, boolean> = {
@@ -68,9 +96,9 @@ export class GamepadEdgeTracker {
         pause: false,
     };
 
-    public poll(scene: Scene): Record<GamepadNavAction, boolean> {
-        const pad = getActiveGamepad(scene);
-        const now: Record<GamepadNavAction, boolean> = {
+    private readCurrentState(): Record<GamepadNavAction, boolean> {
+        const pad = getRawActiveGamepad();
+        const state: Record<GamepadNavAction, boolean> = {
             up: false,
             down: false,
             left: false,
@@ -81,16 +109,24 @@ export class GamepadEdgeTracker {
         };
 
         if (pad) {
-            const stickY = pad.leftStick?.y ?? 0;
-            const stickX = pad.leftStick?.x ?? 0;
-            now.up = pad.up || stickY < -0.55;
-            now.down = pad.down || stickY > 0.55;
-            now.left = pad.left || stickX < -0.55;
-            now.right = pad.right || stickX > 0.55;
-            now.confirm = Boolean(pad.A || pad.buttons[0]?.pressed);
-            now.back = Boolean(pad.B || pad.buttons[1]?.pressed);
-            now.pause = Boolean(pad.buttons[9]?.pressed || pad.buttons[8]?.pressed);
+            const stickX = pad.axes?.[0] ?? 0;
+            const stickY = pad.axes?.[1] ?? 0;
+            const buttons = pad.buttons;
+
+            state.up = Boolean(buttons?.[12]?.pressed) || stickY < -0.55;
+            state.down = Boolean(buttons?.[13]?.pressed) || stickY > 0.55;
+            state.left = Boolean(buttons?.[14]?.pressed) || stickX < -0.55;
+            state.right = Boolean(buttons?.[15]?.pressed) || stickX > 0.55;
+            state.confirm = Boolean(buttons?.[0]?.pressed);
+            state.back = Boolean(buttons?.[1]?.pressed);
+            state.pause = Boolean(buttons?.[9]?.pressed || buttons?.[8]?.pressed);
         }
+
+        return state;
+    }
+
+    public poll(_scene?: Scene): Record<GamepadNavAction, boolean> {
+        const now = this.readCurrentState();
 
         const triggered: Record<GamepadNavAction, boolean> = {
             up: now.up && !this._prev.up,
@@ -106,14 +142,8 @@ export class GamepadEdgeTracker {
         return triggered;
     }
 
-    public reset(scene?: Scene) {
-        if (scene) {
-            // Sync current held buttons so newly opened menus don't fire stale presses
-            this.poll(scene);
-            return;
-        }
-        for (const key of Object.keys(this._prev) as GamepadNavAction[]) {
-            this._prev[key] = false;
-        }
+    public reset(_scene?: Scene) {
+        const current = this.readCurrentState();
+        Object.assign(this._prev, current);
     }
 }

@@ -60,9 +60,14 @@ export default class MainGameScene extends Scene {
             this.registry.set(RegistryConstants.Keys.PLAYER_LEVEL, level);
             this.openLevelUpModal(player);
         };
+        const onResume = () => {
+            this._gamepadTracker.reset(this);
+        };
         this.game.events.on(GameConstants.Events.LEVEL_UP_EVENT, onLevelUp, this);
+        this.events.on(Scenes.Events.RESUME, onResume, this);
         this.events.once(Scenes.Events.SHUTDOWN, () => {
             this.game.events.off(GameConstants.Events.LEVEL_UP_EVENT, onLevelUp, this);
+            this.events.off(Scenes.Events.RESUME, onResume, this);
         }, this);
 
         this.cameras.main.startFollow(player, true, 0.12, 0.12);
@@ -175,7 +180,14 @@ export default class MainGameScene extends Scene {
 
     private openLevelUpModal(player: Player) {
         if (!player.active) return;
-        this.scene.pause(GameConstants.SceneKeys.MAIN_GAME);
+        if (this.scene.isActive(GameConstants.SceneKeys.LEVEL_UP)) return;
+        if (this.scene.isActive(GameConstants.SceneKeys.PAUSE)) {
+            this.scene.stop(GameConstants.SceneKeys.PAUSE);
+        }
+
+        if (!this.scene.isPaused(GameConstants.SceneKeys.MAIN_GAME)) {
+            this.scene.pause(GameConstants.SceneKeys.MAIN_GAME);
+        }
         this.scene.launch(GameConstants.SceneKeys.LEVEL_UP, { player });
     }
 

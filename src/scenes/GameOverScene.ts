@@ -123,6 +123,7 @@ export default class GameOverScene extends Phaser.Scene {
         });
 
         this.time.delayedCall(350, () => {
+            this._gamepadTracker.reset(this);
             this._inputReady = true;
         });
 

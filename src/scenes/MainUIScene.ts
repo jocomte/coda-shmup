@@ -4,7 +4,7 @@ import Player, { type ActivePowerUpStatus, type ExpStatus } from "../entities/Pl
 import AudioManager from "../managers/AudioManager.ts";
 import GameConstants from "../GameConstants.ts";
 import RegistryConstants from "../RegistryConstants.ts";
-import { getActiveGamepad } from "../utils/GamepadUtils.ts";
+import { isGamepadConnected } from "../utils/GamepadUtils.ts";
 import type MainGameScene from "./MainGameScene.ts";
 
 type RadarSnapshot = {
@@ -196,7 +196,7 @@ export default class MainUIScene extends Scene {
 
     update() {
         if (this._gamepadBadge) {
-            this._gamepadBadge.setVisible(getActiveGamepad(this) !== null);
+            this._gamepadBadge.setVisible(isGamepadConnected(this));
         }
     }
 

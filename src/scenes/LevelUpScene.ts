@@ -94,6 +94,7 @@ export default class LevelUpScene extends Scene {
 
         // Small delay so held movement/action keys don't immediately pick an upgrade
         this.time.delayedCall(350, () => {
+            this._gamepadTracker.reset(this);
             this._inputReady = true;
         });
 
@@ -209,17 +210,19 @@ export default class LevelUpScene extends Scene {
     }
 
     private selectUpgrade(choice: UpgradeDefinition) {
+        if (this._selectionMade) return;
         this._selectionMade = true;
+        this._player.consumePendingLevelUp();
         this._player.applyUpgrade(choice.id);
         this.finishSelection();
     }
 
     private finishSelection() {
-        this.scene.stop();
         if (this._player.hasPendingLevelUps()) {
-            this._player.triggerNextLevelUp();
+            this.scene.restart({ player: this._player });
         } else {
             this.scene.resume(GameConstants.SceneKeys.MAIN_GAME);
+            this.scene.stop();
         }
     }
 }

@@ -115,6 +115,7 @@ export default class PauseScene extends Scene {
         }, this);
 
         this.time.delayedCall(220, () => {
+            this._gamepadTracker.reset(this);
             this._inputReady = true;
         });
 
@@ -380,21 +381,20 @@ export default class PauseScene extends Scene {
     }
 
     private resumeGame() {
-        this.scene.stop();
         this.scene.resume(GameConstants.SceneKeys.MAIN_GAME);
+        this.scene.stop();
     }
 
     private restartGame() {
-        this.scene.stop();
         this.scene.stop(GameConstants.SceneKeys.MAIN_UI);
-        this.scene.stop(GameConstants.SceneKeys.MAIN_GAME);
+        this.scene.stop(GameConstants.SceneKeys.LEVEL_UP);
         this.scene.launch(GameConstants.SceneKeys.MAIN_UI);
         this.scene.start(GameConstants.SceneKeys.MAIN_GAME);
     }
 
     private quitToHome() {
-        this.scene.stop();
         this.scene.stop(GameConstants.SceneKeys.MAIN_UI);
+        this.scene.stop(GameConstants.SceneKeys.LEVEL_UP);
         this.scene.stop(GameConstants.SceneKeys.MAIN_GAME);
         this.scene.start(GameConstants.SceneKeys.HOME);
     }

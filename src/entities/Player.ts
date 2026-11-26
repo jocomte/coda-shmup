@@ -10,7 +10,7 @@ import AudioManager from "../managers/AudioManager.ts";
 import Health from "../components/Health.ts";
 import Movement from "../components/Movement.ts";
 import Weapon from "../components/Weapon.ts";
-import { getActiveGamepad, readGamepadMove, readGamepadRightStick } from "../utils/GamepadUtils.ts";
+import { isGamepadFireHeld, readGamepadMove, readGamepadRightStick } from "../utils/GamepadUtils.ts";
 
 type MoveKeys = {
     up: Input.Keyboard.Key;
@@ -233,16 +233,16 @@ export default class Player extends Entity {
 
         if (this._pendingLevelUps > 0) {
             this._audioManager?.playSfx('sfx_levelup', 0.85);
-            this.triggerNextLevelUp();
+            this.scene.game.events.emit(GameConstants.Events.LEVEL_UP_EVENT, this._level);
         } else {
             this._audioManager?.playSfx('sfx_exp', 0.45);
         }
     }
 
-    public triggerNextLevelUp() {
-        if (this._pendingLevelUps <= 0) return;
-        this._pendingLevelUps -= 1;
-        this.scene.game.events.emit(GameConstants.Events.LEVEL_UP_EVENT, this._level);
+    public consumePendingLevelUp() {
+        if (this._pendingLevelUps > 0) {
+            this._pendingLevelUps -= 1;
+        }
     }
 
     public hasPendingLevelUps(): boolean {
@@ -586,8 +586,7 @@ export default class Player extends Entity {
 
         this.syncAttachmentTransforms(timeSinceLaunch);
 
-        const activePad = getActiveGamepad(this.scene);
-        const padFireHeld = Boolean(activePad && (activePad.A || activePad.R2 > 0.3 || activePad.buttons[7]?.pressed));
+        const padFireHeld = isGamepadFireHeld();
         const shouldAutoFire = nearestEnemy !== null || hasManualAim || padFireHeld || (this._moveKeys?.space.isDown ?? false);
         const tempRapidFire = this._rapidFireRemainingMs > 0 ? 0.5 : 1.0;
         const currentRateOfFire = this._baseRateOfFire * this._fireRateMultiplier * tempRapidFire;

@@ -22,7 +22,8 @@ const config: Types.Core.GameConfig = {
         autoCenter: Scale.CENTER_BOTH
     },
     input: {
-        gamepad: true,
+        // Use direct navigator.getGamepads() polling in GamepadUtils to avoid Phaser GamepadPlugin scene-transition bugs
+        gamepad: false,
     },
     physics: {
         default: 'arcade',

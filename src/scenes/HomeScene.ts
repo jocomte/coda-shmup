@@ -3,7 +3,7 @@ import GameConstants from "../GameConstants.ts";
 import AudioManager from "../managers/AudioManager.ts";
 import SaveManager from "../managers/SaveManager.ts";
 import SaveConstants, { type LeaderboardEntry } from "../SaveConstants.ts";
-import { GamepadEdgeTracker, getActiveGamepad } from "../utils/GamepadUtils.ts";
+import { GamepadEdgeTracker, isGamepadConnected } from "../utils/GamepadUtils.ts";
 
 export default class HomeScene extends Phaser.Scene {
     private saveManager?: SaveManager;
@@ -168,6 +168,7 @@ export default class HomeScene extends Phaser.Scene {
         }, this);
 
         this.time.delayedCall(200, () => {
+            this._gamepadTracker.reset(this);
             this._inputReady = true;
         });
 
@@ -188,7 +189,7 @@ export default class HomeScene extends Phaser.Scene {
 
     update() {
         if (this._gamepadStatusText) {
-            this._gamepadStatusText.setVisible(getActiveGamepad(this) !== null);
+            this._gamepadStatusText.setVisible(isGamepadConnected(this));
         }
 
         if (!this._inputReady || this._starting) return;
