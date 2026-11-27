@@ -14,11 +14,11 @@ import SaveManager from "./managers/SaveManager.ts";
 const config: Types.Core.GameConfig = {
     type: AUTO,
     width: 1080,
-    height: 1920,
+    height: 960,
     parent: 'game-container',
-    backgroundColor: '#000',
+    backgroundColor: '#030712',
     scale: {
-        mode: Scale.FIT,
+        mode: Scale.EXPAND,
         autoCenter: Scale.CENTER_BOTH
     },
     input: {

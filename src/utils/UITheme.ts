@@ -124,6 +124,75 @@ export function drawCornerBrackets(
 }
 
 /**
+ * Draws a crisp vector gear/settings icon centered at (cx, cy).
+ */
+export function drawGearIcon(
+    g: GameObjects.Graphics,
+    cx: number,
+    cy: number,
+    radius: number = 13,
+    color: number = 0xe2e8f0
+): GameObjects.Graphics {
+    const teeth = 8;
+    const innerTooth = radius - 1;
+    const outerTooth = radius + 4;
+    g.lineStyle(3.2, color, 1);
+
+    for (let i = 0; i < teeth; i++) {
+        const angle = (i * Math.PI * 2) / teeth;
+        g.lineBetween(
+            cx + Math.cos(angle) * innerTooth,
+            cy + Math.sin(angle) * innerTooth,
+            cx + Math.cos(angle) * outerTooth,
+            cy + Math.sin(angle) * outerTooth
+        );
+    }
+
+    g.lineStyle(3, color, 1);
+    g.strokeCircle(cx, cy, radius - 1.5);
+    g.lineStyle(2, color, 0.95);
+    g.strokeCircle(cx, cy, 4.5);
+    return g;
+}
+
+/**
+ * Creates a compact chamfered icon button featuring a vector settings gear.
+ */
+export function createSettingsIconButton(
+    scene: Scene,
+    cx: number,
+    cy: number,
+    size: number,
+    onClick: () => void
+): GameObjects.Container {
+    const container = scene.add.container(cx, cy);
+    const gfx = scene.add.graphics();
+
+    const redraw = (hovered: boolean) => {
+        gfx.clear();
+        drawChamferPanel(gfx, 0, 0, size, size, {
+            cut: 10,
+            fillColor: hovered ? 0x1e293b : 0x0b1324,
+            fillAlpha: 0.9,
+            strokeColor: hovered ? 0x7dd3fc : 0x38bdf8,
+            strokeAlpha: hovered ? 1 : 0.78,
+            lineWidth: 2,
+        });
+        drawGearIcon(gfx, 0, 0, Math.round(size * 0.24), hovered ? 0xffffff : 0xbae6fd);
+    };
+    redraw(false);
+
+    const hit = scene.add.rectangle(0, 0, size, size, 0x000000, 0)
+        .setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => redraw(true));
+    hit.on('pointerout', () => redraw(false));
+    hit.on('pointerdown', onClick);
+
+    container.add([gfx, hit]);
+    return container;
+}
+
+/**
  * Renders styled leaderboard rows into a Container (used by HomeScene & GameOverScene).
  */
 export function renderLeaderboardRows(
