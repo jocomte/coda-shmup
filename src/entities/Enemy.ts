@@ -166,7 +166,7 @@ export default class Enemy extends Entity {
 
         // Smooth, progressive difficulty scaling based on player level
         const levelOffset = Math.max(0, playerLevel - 1);
-        const hpScale = this.isBoss ? (1 + levelOffset * 0.16) : (1 + levelOffset * 0.22);
+        const hpScale = this.isBoss ? (1 + levelOffset * 0.24) : (1 + levelOffset * 0.22);
         const speedScale = 1 + Math.min(0.45, levelOffset * 0.045);
         const damageBonus = Math.min(14, Math.floor(levelOffset * 1.5));
         const fireCooldownScale = Math.max(0.75, Math.pow(0.97, levelOffset));
